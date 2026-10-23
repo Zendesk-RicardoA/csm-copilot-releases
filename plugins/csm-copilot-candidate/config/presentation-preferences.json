@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "preset": "balanced",
+  "content_density": "medium",
+  "metric_detail": "selective",
+  "product_explanation": "standard",
+  "next_steps_tone": "collaborative"
+}

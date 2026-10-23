@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "renderer_baseline": "recovery-v3",
+  "contracts": {
+    "account_evidence": "AccountIntelligenceCoreV1",
+    "build_manifest": "DeckBuildManifestV1",
+    "bridge": "1.2.0",
+    "release_descriptor": "1.0",
+    "customer_wording": "customer-outcome-v2",
+    "renewal_copy": "RenewalCustomerHeroCopyV2"
+  },
+  "native_contract": "native-review-v6",
+  "native_fit_contract": "native-fit-v3",
+  "renewal_layout_contract": "renewal-native-layout-v3",
+  "renewal_preflight_contract": "renewal-native-preflight-v1",
+  "phase_story_contract": "phase-story-v2",
+  "narrative_selection_contract": "narrative-selection-v1",
+  "metric_trend_contract": "MetricTrendV1",
+  "peer_takeaway_layout_contract": "peer-takeaway-area-v1",
+  "investigation_layout_contract": "investigation-left-area-v1",
+  "master_contract_sha256": "4874d6135aaf5fc468ba9b0fce0aaa099c4d64a4644ffd39a7aa6a99012ab5ea",
+  "renderers": {
+    "meeting_prep": {
+      "implementation_sha256": "0dd98173c5249ce70d01fa2cf97d4d3cc378e10d9b953d27dad12dbc23f3b01f",
+      "bundle_sha256": "d590bca6bf1e955097038860ce48ea5f7a8314703b1bcf20689aa160aa56b238"
+    },
+    "renewal_preparation": {
+      "implementation_sha256": "bcb4f0a5370b8c25e005c4a425b9cb8d3a62c340fb7a6534bb096263cee9833b",
+      "bundle_sha256": "703d791c3704928ae0af705f0e1a1d3c7b568d3b327aea6d9a6ad35abc83c57b"
+    }
+  }
+}

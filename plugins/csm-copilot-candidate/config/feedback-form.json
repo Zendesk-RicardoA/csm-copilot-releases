@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "enabled": false,
+  "mode": "google_forms_prefill",
+  "responder_url": "",
+  "entries": {
+    "case_id": "",
+    "package_version": "",
+    "renderer_baseline": "",
+    "revision": "",
+    "would_use": "",
+    "saved_time": "",
+    "biggest_improvement": "",
+    "language_review_status": "",
+    "language_review_outcome": "",
+    "translation_issue_categories": ""
+  }
+}

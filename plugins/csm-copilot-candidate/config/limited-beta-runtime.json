@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "mode": "disabled",
+  "renderer_mode": "manual_bound_script",
+  "organizational_controls": {
+    "company_identity": false,
+    "read_only_zdp": false,
+    "transcript_secondary_processing": false,
+    "private_draft_google_scope": false,
+    "approved_renderer_execution": false,
+    "retention_policy": false,
+    "operational_support": false
+  }
+}

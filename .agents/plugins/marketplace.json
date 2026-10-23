@@ -1,0 +1,20 @@
+{
+  "name": "csm-copilot-candidate",
+  "interface": {
+    "displayName": "CSM Copilot Candidate"
+  },
+  "plugins": [
+    {
+      "name": "csm-copilot-candidate",
+      "source": {
+        "source": "local",
+        "path": "./plugins/csm-copilot-candidate"
+      },
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    }
+  ]
+}

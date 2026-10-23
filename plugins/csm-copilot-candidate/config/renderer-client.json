@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "enabled": false,
+  "deployment_id": null,
+  "function_name": "runCsmCopilotDesktopBetaV1",
+  "dev_mode": false
+}

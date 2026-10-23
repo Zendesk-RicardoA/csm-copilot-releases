@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "renewal_guidance": {
+    "provider": "native_google_drive",
+    "execution_owner": "authenticated_desktop_host",
+    "capabilities": ["get_profile", "search", "get_spreadsheet_metadata", "get_spreadsheet_range", "get_file_metadata", "get_document_text", "fetch"],
+    "separate_oauth_client_required": false,
+    "source_copy_required": true,
+    "raw_copy_retention": "transient_host_only"
+  },
+  "gong": {
+    "provider": "Converge",
+    "approval_basis": "approved_mcp_capabilities",
+    "capabilities": ["list_customer_calls", "search_customer_calls", "get_customer_call"],
+    "execution_owner": "authenticated_desktop_host",
+    "additional_snowflake_screen_required": false
+  },
+  "snowflake": {
+    "connection_name": "zdp-global",
+    "selected_call_evidence_model": "llama3.1-8b",
+    "approved_read_only_roles": ["PUBLIC"]
+  }
+}

@@ -1,0 +1,5 @@
+private-setup*.json
+private-config/
+*.command
+.env
+.DS_Store

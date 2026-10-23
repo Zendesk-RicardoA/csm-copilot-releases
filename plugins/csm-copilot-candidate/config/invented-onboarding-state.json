@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "mode": "invented_only",
+  "identity": {
+    "state": "connected",
+    "provider": "invented_company_sso",
+    "subject": "invented-tester-alpha",
+    "verified": true
+  },
+  "snowflake": {
+    "state": "connected",
+    "authentication": "invented_browser_sso",
+    "read_only_verified": true
+  },
+  "salesforce_cli": {
+    "state": "not_configured"
+  },
+  "google": {
+    "state": "connected",
+    "authentication": "invented_browser_authorization",
+    "private_draft_scope_verified": true
+  },
+  "tester_register": {
+    "state": "not_configured",
+    "blocking": false
+  }
+}

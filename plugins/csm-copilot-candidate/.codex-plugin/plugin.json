@@ -1,6 +1,6 @@
 {
   "name": "csm-copilot-candidate",
-  "version": "0.2.27-candidate.live.codex.20261027130357",
+  "version": "0.2.27-candidate.live.codex.20261028154814",
   "description": "Isolated, bounded real-data candidate snapshot of the CSM Copilot beta.",
   "author": {
     "name": "CSM Copilot beta maintainers"

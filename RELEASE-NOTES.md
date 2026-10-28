@@ -1,30 +1,26 @@
 # Candidate release notes
 
-Package: **0.2.27-candidate.live.codex.20261027130357**.
+Package: **0.2.27-candidate.live.codex.20261028154814**.
 
-Frozen validation archive SHA-256: 653fcb0fbf1d87f24ea2fdd7c26b6aa74f635d6079534e95b76f9e41a7a0df41.
+Frozen validation archive SHA-256: ed66c43076d218e9c502a7517bc4d688b7b757b960fbc99c29d23527dc40af02.
 
-This is the tested Candidate uploaded to the existing private marketplace. It remains separate from the main approved tester release.
+## Changes
 
-## Changes since the previous Git Candidate
+- Completed native account/contact evidence creates its own account-context receipt. Email preparation no longer needs a caller-created context digest.
+- The finished read returns its completion request and the completion control returns the revision to review. Evidence completion grants no approval.
+- An explicit address request uses a read-only lookup of the same verified contact evidence. It changes no recipient, approval, draft or expiry and accepts no caller-supplied address.
+- Polling the contact run preserves its original expiry. Expired or restarted contact memory cannot be reconstructed from a saved digest.
+- The individual-email host fixture now follows native completion without manually injecting account context. Existing independent email reviews and duplicate-draft protection remain in place.
 
-- Renewal preparation continues the existing evidence collection and returns the approved brief, authorized temporary charts and one next action. It reuses the active run without creating duplicate reads, approvals or drafts.
-- Selecting a second outreach contact prepares a second email with one recipient. It reuses the account case, evidence and valid guide, and preserves the first email or existing draft with its independent review and draft status.
-- Every email has its own recipient, exact-wording review, approvals and draft delivery receipt. Preparing another email does not copy approvals from the first.
-- Finishing one draft retains the still-valid contact shortlist until its original expiry, so another contact does not require repeating account research.
-- The complete unapproved email is shown in chat for review. Existing approval gates still block Gmail creation until approved.
-- Workflow status reports individual emails and their next gates. Repeated requests remain idempotent; uncertain writes require reconciliation.
+## Verification
 
-## Verified against this frozen artifact
-
-- All 20 automated stages passed, including source and packaged tests, protocol checks, fault injection and invented runs for all five workflows.
-- Twenty-one permanent separate-email tests cover independent review/delivery, unchanged first emails, reuse, cap, expiry, restart, identity and revision guards.
-- Six fresh invented separate-email model runs passed: three each on GPT-6 Luna and GPT-6 Sol. Independent grading checked tool calls, displayed copy and state.
-- The authorized local installation matched the frozen bytes and started successfully. Setup controls and private profiles were preserved.
-- Both renderer bundles and their contract fingerprints are unchanged. No builder update is included.
+- All 20 automated technical stages passed: 1,119 source tests, 683 packaged tests, protocol and fault checks, frozen renderer checks and invented runs for all five workflows.
+- Nine new native-handoff and address-disclosure checks cover the reproduced failure, privacy, source gaps, changed evidence, explicit requests, account/owner/run/revision mismatch, expiry and restart.
+- The local installed files match the frozen package and a fresh MCP process starts with matching loaded, disk and approved versions. Both new and existing outreach controls are registered.
+- Existing credentials, profiles, signature and source permissions are preserved. Renderer components are unchanged; no builder update is included.
 
 ## Acceptance limits
 
-The separate-email model tests used invented accounts and isolated source tools. They performed no live customer reads or real Gmail writes. All five live workflows, visible live charts, rendered human review and a clean non-owner installation were not rechecked for this exact artifact. Earlier approvals remain attached to their original evidence and package; they are not transferred here.
+The automated tests use invented accounts and Gmail mocks. Fresh actual-model acceptance and live customer/Gmail verification have not been completed for this exact artifact. No customer source read, real Gmail draft, send or Slides build was performed by this installation/update. Earlier acceptance remains attached to its original artifact.
 
-Candidate upload does not authorize a new installation, wider release, customer communication or customer draft. Keep the matching setup file private and authenticate independently. Existing source, retention and approval boundaries remain in force.
+This private Candidate update was explicitly authorized. It does not approve wider distribution or customer communications. Keep the matching private setup file outside Git and authenticate independently.

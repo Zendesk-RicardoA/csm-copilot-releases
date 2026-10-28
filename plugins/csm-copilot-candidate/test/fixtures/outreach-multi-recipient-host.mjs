@@ -46,10 +46,12 @@ export function startMultiRecipientHost(existing = null) {
     record: caseId => JSON.parse(fs.readFileSync(path.join(dir, 'state', caseId + '.json'))) };
 }
 
-export async function prepareMultiRecipientCase(s) {
+export async function completeMultiRecipientEvidence(s) {
   await s.rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {} });
   const created = await s.call('beta_create_authorized_journey_a_case', { language: 'es' });
+  if (created.isError) throw new Error(JSON.stringify(created));
   const queue = await s.call('beta_read_owned_cta_queue', { case_id: created.case_id });
+  if (queue.isError) throw new Error(JSON.stringify(queue));
   const started = await s.call('beta_run_journey_a_contact_evidence', { case_id: created.case_id, work_item_ref: queue.queue[0].work_item_ref });
   const args = { case_id: created.case_id, contact_evidence_run_id: started.contact_evidence_run_id };
   let final;
@@ -59,15 +61,19 @@ export async function prepareMultiRecipientCase(s) {
     await new Promise(resolve => setTimeout(resolve, 20));
   }
   if (final?.relationship_context_state !== 'completed' || final.recommended_contacts?.length !== 2) throw new Error('Invented verified contacts did not complete.');
-  const completed = await s.call('beta_complete_journey_a_contact_evidence', { ...args, gmail_metadata_state: 'not_requested', gmail_metadata_message_count: 0 });
+  if (final.completion_request?.tool !== 'beta_complete_journey_a_contact_evidence') throw new Error('Native evidence completion request missing.');
+  const completed = await s.call(final.completion_request.tool, final.completion_request.arguments);
   if (completed.isError) throw new Error(completed.code);
-  const bound = await s.call('beta_bind_journey_context', { case_id: created.case_id, journey: 'journey_a', context_digest: 'a'.repeat(64),
-    account_ref_digest: hash('account:001000000000000AAA'), context_version: '1.0.0', item_count: 3, warning_codes: [] });
+  return { args, final, completed, revision: completed.revision };
+}
+
+export async function prepareMultiRecipientCase(s) {
+  const { args, final, revision } = await completeMultiRecipientEvidence(s);
   for (const gate of ['work_selection', 'account_evidence']) {
-    const result = await s.call('beta_record_journey_a_approval', { case_id: created.case_id, revision: bound.revision, gate });
+    const result = await s.call('beta_record_journey_a_approval', { case_id: args.case_id, revision, gate });
     if (result.isError) throw new Error(result.code);
   }
-  return { args, final, revision: bound.revision };
+  return { args, final, revision };
 }
 
 export async function prepareInventedRecipientGuide(s, caseId) {

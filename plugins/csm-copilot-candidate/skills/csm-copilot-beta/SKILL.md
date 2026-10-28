@@ -512,6 +512,9 @@ confirmation. It must not start a specialized workflow, send a message, or persi
 Use `beta_bind_journey_context` only after the context validates. The control plugin accepts only
 the context digest, account digest, version, item count, and warning codes. It never accepts customer
 copy, contact details, source identifiers, raw metrics, transcript text, or message content.
+For the native outreach account/contact read, do not reconstruct this contract or call that manual
+binder. `beta_complete_journey_a_contact_evidence` attaches a receipt from the evidence that ran.
+Its receipt is labeled native evidence and does not claim to be a host-validated cross-journey contract.
 
 Use `beta_handoff_journey` when the next task belongs to the other journey. The handoff carries only
 the reviewed shared-context reference and warning codes. It creates a new case revision and clears
@@ -1064,6 +1067,20 @@ State a genuine source gap only after that retry fails; never silently omit the 
 
 ### Gmail draft after chat review
 
+Finish the managed account/contact read by executing its `completion_request`. This attaches the
+same native evidence to the case and returns the current revision. It grants no approval and
+requires no source reread or caller-created context digest. If optional Gmail metadata was not
+requested, keep `gmail_metadata_state: "not_requested"` and count zero. Use an actual Gmail result's
+state only when that read ran. Show the complete account evidence and gaps before recording the
+CSM's work/account reviews. Never infer those reviews from evidence completion.
+
+When the CSM explicitly asks to see one contact's email address, call
+`beta_read_verified_contact_email` with the completed run, current revision, that exact contact
+reference and `explicit_email_request: true`. Show the returned address. This cache-only lookup
+needs no email or work/account approval and changes no selection, approval, draft or expiry.
+Unavailable, excluded or expired contacts remain visible as gaps; never guess an address or
+substitute another source. Address disclosure does not authorize Gmail creation.
+
 For different selected contacts, the default is **one separate email per contact**. Prepare the
 account once and review its work selection and account evidence once. For each selected contact,
 call `beta_prepare_outreach_email` with the existing case/revision, completed contact-evidence run,
@@ -1113,7 +1130,8 @@ starting the case or evidence reads again; the prior selection remains unchanged
 After the managed contact read finishes, call `beta_complete_journey_a_contact_evidence` to
 record its executed source states. If optional Gmail metadata was not requested, use
 `gmail_metadata_state: "not_requested"` and count zero, with no Gmail failure code; never report
-an unrequested read as checked or unavailable. Bind the reviewed same-account context as usual.
+an unrequested read as checked or unavailable. Completion binds the native same-account context
+itself; use its returned revision. Do not fabricate a CrossJourneyContextV1 to repair this handoff.
 Only when the CSM explicitly requests one email with a shared To list, call
 `beta_get_verified_outreach_recipient` once with the current case revision and the completed
 `contact_evidence_run_id`. For multiple recipients, pass the complete chosen `contact_refs` list

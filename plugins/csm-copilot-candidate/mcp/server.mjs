@@ -135,6 +135,7 @@ import {
 } from "./signature-profile.mjs";
 import { buildSetupWizardStatus, resumeSetupWizard, startSetupWizard } from "./setup-wizard.mjs";
 import { buildOutreachPack } from "./outreach-pack.mjs";
+import { bindNativeOutreachEvidence } from "./outreach-evidence-context.mjs";
 import { invokeAppsScriptRenderer, probeAppsScriptRenderer } from "./renderer-client.mjs";
 import { assertReferenceLockedRendererRequest } from "./reference-locked-renderer.mjs";
 import { DESIGN_FAMILY, validateApprovedRecoveryDesignContract } from "./approved-recovery-design.mjs";
@@ -1798,7 +1799,7 @@ const tools = [
   },
   {
     name: "beta_complete_journey_a_contact_evidence",
-    description: "Legacy optional relationship-context completion. It must not be used to obtain, delay, or gate the contact shortlist.",
+    description: "Complete the same managed account/contact evidence and attach its native account-context receipt. Call the finished read's completion_request before outreach review or an explicit email-address lookup. No caller-created context digest, new source read or approval is needed. Optional Gmail/activity/Gong checks must never delay the contact shortlist; unrequested Gmail metadata uses not_requested and count zero. Use the returned case revision for reviews and email preparation.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1822,6 +1823,15 @@ const tools = [
       contact_evidence_run_id: { type: "string", pattern: "^[0-9a-f-]{36}$" },
       contact_ref: { type: "string", pattern: "^[a-f0-9]{64}$" },
     }, required: ["case_id", "revision", "contact_evidence_run_id", "contact_ref"], additionalProperties: false },
+  },
+  {
+    name: "beta_read_verified_contact_email",
+    description: "Show one verified contact email only when the CSM explicitly asks for the address. Use the same case, current revision and completed native contact-evidence run. This cache-only read does not prepare or select an email, change approvals, extend expiry or create a Gmail draft. Never guess an address or accept a caller-supplied email.",
+    inputSchema: { type: "object", properties: {
+      case_id: { type: "string" }, revision: { type: "integer", minimum: 1 },
+      contact_evidence_run_id: { type: "string", pattern: "^[0-9a-f-]{36}$" },
+      contact_ref: { type: "string", pattern: "^[a-f0-9]{64}$" }, explicit_email_request: { type: "boolean", const: true },
+    }, required: ["case_id", "revision", "contact_evidence_run_id", "contact_ref", "explicit_email_request"], additionalProperties: false },
   },
   {
     name: "beta_get_verified_outreach_recipient",
@@ -2287,6 +2297,7 @@ async function callTool(name, args = {}) {
     "beta_continue_journey_a_contact_evidence",
     "beta_complete_journey_a_contact_evidence",
     "beta_record_journey_a_approval",
+    "beta_read_verified_contact_email",
     "beta_get_verified_outreach_recipient",
     "beta_prepare_outreach_email",
     "beta_bind_outreach_draft_review",
@@ -3284,6 +3295,7 @@ async function callTool(name, args = {}) {
       accountRefDigest,
       accountId: selection.accountId,
       coreEvidence,
+      workItemRef: args.work_item_ref || null,
       expiresAt: Date.now() + JOURNEY_A_RUNTIME_SELECTION_TTL_MS,
     });
     return textResult({
@@ -3947,7 +3959,6 @@ async function callTool(name, args = {}) {
         slowEvidenceStartedAt: Date.now(),
         slowEvidenceStageStartedAt: Date.now(),
         slowEvidenceSourceStartedAt: Date.now(),
-        expiresAt: Date.now() + JOURNEY_A_RUNTIME_SELECTION_TTL_MS,
       };
       activeJourneyAContactEvidenceRuns.set(args.contact_evidence_run_id, startedRun);
       // These reads refine the account brief, but cannot suppress the contact
@@ -4108,7 +4119,6 @@ async function callTool(name, args = {}) {
       sourceGapCodes: evidence.source_gap_codes,
       sourceDurationsMs: evidence.source_durations_ms,
       gongLookbackDays: evidence.gong_lookback_days,
-      expiresAt: Date.now() + JOURNEY_A_RUNTIME_SELECTION_TTL_MS,
     };
     activeJourneyAContactEvidenceRuns.set(args.contact_evidence_run_id, completedRun);
     const recommendations = recommendContacts(evidence.contacts, evidence.source_states);
@@ -4128,12 +4138,16 @@ async function callTool(name, args = {}) {
       source_diagnostics: evidence.source_diagnostics,
       gong_lookback_days: evidence.gong_lookback_days,
       relationship_context_state: hasSourceGaps ? "completed_with_gaps" : "completed",
+      completion_request: { tool: "beta_complete_journey_a_contact_evidence", arguments: {
+        case_id: record.case_id, contact_evidence_run_id: args.contact_evidence_run_id,
+        gmail_metadata_state: "not_requested", gmail_metadata_message_count: 0,
+      } },
       source_elapsed_ms: Date.now() - evidenceRun.slowEvidenceStartedAt,
       user_notice: recommendations.contacts.length
         ? "The supporting reads have finished. Review the account brief, suggested contacts and any source gaps."
         : recommendations.message,
       next_action: recommendations.contacts.length
-        ? "Show the account brief, suggested contacts and source gaps. Review them before selecting a recipient."
+        ? "Show the account brief, suggested contacts and source gaps. Execute completion_request to attach this evidence without approval or another source read, then review the account before preparing an email. If Gmail metadata was actually checked, record its true state instead of the unrequested default."
         : recommendations.prioritized_contacts.length
           ? "Show the contact priorities and their unresolved detail states with the account brief. Only a verified recipient can proceed to outreach approval."
           : "Show the available account evidence and contact rejection reasons. A usable, reviewed contact is required before an outreach draft can proceed.",
@@ -4195,7 +4209,7 @@ async function callTool(name, args = {}) {
     }
     const sourceGaps = [...new Set([...(shortlistEvidence.sourceGapCodes || []), ...gmailSourceGaps])];
     const recommendations = recommendContacts(shortlistEvidence.contacts, shortlistEvidence.sourceStates);
-    const updated = recordJourneyAContactVerification(record, {
+    let updated = recordJourneyAContactVerification(record, {
       accountRefDigest: evidence.accountRefDigest,
       salesforceIdentityState: shortlistEvidence.sourceStates.salesforce_identity,
       contactSnapshotState: shortlistEvidence.sourceStates.contact_snapshot || "checked",
@@ -4210,6 +4224,12 @@ async function callTool(name, args = {}) {
     });
     updated.journey_state.contexts.journey_a.contact_verification.completed_evidence_digest = crypto.createHash("sha256")
       .update(args.contact_evidence_run_id).digest("hex");
+    updated = bindNativeOutreachEvidence(updated, {
+      accountRefDigest: evidence.accountRefDigest, evidenceRunRef: args.contact_evidence_run_id,
+      workItemRef: evidence.workItemRef, brief: shortlistEvidence.brief, contacts: shortlistEvidence.contacts,
+      sourceStates: { ...shortlistEvidence.sourceStates, gmail_metadata: args.gmail_metadata_state }, sourceGaps,
+      testerId: runtime.testerId,
+    });
     activeOutreachRecipientHandoffs.retain({ caseId: record.case_id, ownerRef: runtime.testerId,
       accountRefDigest: evidence.accountRefDigest, evidenceRunRef: args.contact_evidence_run_id,
       expiresAt: evidence.expiresAt, contacts: shortlistEvidence.contacts, emails: evidence.coreEvidence.runtimeContactEmails });
@@ -4294,6 +4314,20 @@ async function callTool(name, args = {}) {
     if (args.renewal_source_mode) updated.renewal_source_mode = args.renewal_source_mode;
     writeCase(updated);
     return textResult({ ...publicCaseStatus(updated), workflow: publicJourneyStatus(updated) });
+  }
+  if (name === "beta_read_verified_contact_email") {
+    if (Object.keys(args).some(key => !["case_id", "revision", "contact_evidence_run_id", "contact_ref", "explicit_email_request"].includes(key))) {
+      throw new BetaError("INVALID_INPUT", "Use only the current case, revision, completed evidence and contact reference. Caller-supplied addresses are not accepted.");
+    }
+    if (typeof args.contact_ref !== "string" || !/^[a-f0-9]{64}$/.test(args.contact_ref)) {
+      throw new BetaError("INVALID_OUTREACH_RECIPIENT_REFERENCE", "Copy the complete contact reference from the same verified shortlist; do not restart its source read.");
+    }
+    validateRealBetaRuntime({ credentialState: runtime.limitedBetaRuntime, manifest: runtime.manifest });
+    if (record.case_kind !== "real_authorized_journey_a") throw new BetaError("INVALID_CASE_KIND", "Read the selected account's native contact evidence first.");
+    return textResult(activeOutreachRecipientHandoffs.readContactEmail(record, {
+      ownerRef: runtime.testerId, revision: args.revision, evidenceRunRef: args.contact_evidence_run_id,
+      contactRef: args.contact_ref, explicitEmailRequest: args.explicit_email_request,
+    }));
   }
   if (name === "beta_get_verified_outreach_recipient") {
     if (Object.keys(args).some(key => !["case_id", "revision", "contact_evidence_run_id", "contact_ref", "contact_refs"].includes(key))) {
@@ -4620,7 +4654,7 @@ input.on("line", (line) => {
         protocolVersion: request.params?.protocolVersion || "2025-06-18",
         capabilities: { tools: {} },
         serverInfo: { name: installedPackageManifest.name, version: installedPackageManifest.version },
-        instructions: "Ordinary meeting preparation defaults to account_brief. It needs no meeting date, recording, case or Slides setup. Route and start the named account brief immediately. A finished read supplies display_delivery_request: call that cache-only control and copy its first text block verbatim into the final reply. Preserve the opening read summary, every section, table header and row; only the established recent-call Summary/Next steps cells may be paraphrased from cached notes. Do not request optional display_details unless the CSM explicitly asks for detailed evidence. Put meeting questions after the brief. Missing temporary-image authorization never blocks the brief; offer cached charts once. Explicit recording analysis and all deck approval gates remain separate. For selected-CTA Renewal Conversation Brief preparation, immediately execute the start result's continuation_request through beta_continue_renewal_preparation until collection finishes. For default renewal delivery, copy its complete first text block verbatim, including the opening note, headings, capitalization, punctuation, next action, all candidate tables and authorized image Markdown. Do not polish, restyle or append another chart offer or selection request; its structured metadata is not another answer. Do not fetch the brief or each chart separately for this default renewal path. Never infer chart visibility, card selections, approvals or draft authorization. Outreach for different contacts defaults to one SEPARATE email per contact. Call beta_prepare_outreach_email for each selected contact using the same case and completed contact evidence, including when the first email is already reviewed or drafted. Do not add the next contact to the first email. Keep each returned email_ref and email_revision with every email approval, wording-review, claim and completion call; revision remains the shared case revision. Review work and account evidence once, then review each email independently. Immediately show the complete unapproved email after preparation, using the requested chat subject/body/signature or composing from the existing evidence and guide. The native tool returns the verified target and review scope, not the copy. Pending contact, template and wording reviews are reviews of that preview; never withhold it waiting for those approvals. They remain required before Gmail creation. Reuse the current guide and still-valid contacts; never restart the case or source reads for another contact. Only an explicit request to edit the To list inside one email uses beta_get_verified_outreach_recipient; that control does not prepare a second email. Other workflow requirements are unchanged.",
+        instructions: "For outreach, execute the finished contact read's completion_request to attach the same native account evidence. It returns the revision to use; never invent a CrossJourneyContextV1 or manual context digest. This is evidence completion, not CSM approval. Record explicit work/account reviews before preparing emails. For an explicit request to show a contact address, use beta_read_verified_contact_email with the same completed run, revision, exact contact_ref and explicit_email_request true; this cache-only disclosure requires no email approval and creates no draft or recipient selection. Ordinary meeting preparation defaults to account_brief. It needs no meeting date, recording, case or Slides setup. Route and start the named account brief immediately. A finished read supplies display_delivery_request: call that cache-only control and copy its first text block verbatim into the final reply. Preserve the opening read summary, every section, table header and row; only the established recent-call Summary/Next steps cells may be paraphrased from cached notes. Do not request optional display_details unless the CSM explicitly asks for detailed evidence. Put meeting questions after the brief. Missing temporary-image authorization never blocks the brief; offer cached charts once. Explicit recording analysis and all deck approval gates remain separate. For selected-CTA Renewal Conversation Brief preparation, immediately execute the start result's continuation_request through beta_continue_renewal_preparation until collection finishes. For default renewal delivery, copy its complete first text block verbatim, including the opening note, headings, capitalization, punctuation, next action, all candidate tables and authorized image Markdown. Do not polish, restyle or append another chart offer or selection request; its structured metadata is not another answer. Do not fetch the brief or each chart separately for this default renewal path. Never infer chart visibility, card selections, approvals or draft authorization. Outreach for different contacts defaults to one SEPARATE email per contact. Call beta_prepare_outreach_email for each selected contact using the same case and completed contact evidence, including when the first email is already reviewed or drafted. Do not add the next contact to the first email. Keep each returned email_ref and email_revision with every email approval, wording-review, claim and completion call; revision remains the shared case revision. Review work and account evidence once, then review each email independently. Immediately show the complete unapproved email after preparation, using the requested chat subject/body/signature or composing from the existing evidence and guide. The native tool returns the verified target and review scope, not the copy. Pending contact, template and wording reviews are reviews of that preview; never withhold it waiting for those approvals. They remain required before Gmail creation. Reuse the current guide and still-valid contacts; never restart the case or source reads for another contact. Only an explicit request to edit the To list inside one email uses beta_get_verified_outreach_recipient; that control does not prepare a second email. Other workflow requirements are unchanged.",
       });
     } else if (request.method === "tools/list") {
       respond(request.id, { tools: visibleTools });

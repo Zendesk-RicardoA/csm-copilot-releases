@@ -49,13 +49,13 @@
         {"step": "cta_queue", "tools": ["beta_read_owned_cta_queue"], "observed": true},
         {"step": "account_research", "tools": ["beta_run_journey_a_contact_evidence", "beta_continue_journey_a_contact_evidence"]},
         {"step": "multi_account_contact_handoff", "tools": ["beta_run_bulk_contact_research", "beta_verify_bulk_contact_emails", "beta_get_bulk_contact_email_verification"], "observed": true},
-        {"step": "verified_recipient_handoff", "tools": ["beta_complete_journey_a_contact_evidence", "beta_prepare_outreach_email", "beta_get_verified_outreach_recipient"]},
+        {"step": "verified_recipient_handoff", "tools": ["beta_complete_journey_a_contact_evidence", "beta_read_verified_contact_email", "beta_prepare_outreach_email", "beta_get_verified_outreach_recipient"]},
         {"step": "renewal_guidance", "tools": ["beta_resolve_renewal_sequence", "beta_continue_renewal_sequence"], "owner": "desktop_host", "hostTools": ["Google Drive.get_profile", "Google Drive.search", "Google Drive.get_spreadsheet_metadata", "Google Drive.get_spreadsheet_range", "Google Drive.get_file_metadata", "Google Drive.get_document_text", "Google Drive.fetch"]},
         {"step": "approval_and_draft", "tools": ["beta_record_journey_a_approval", "beta_bind_outreach_draft_review", "beta_claim_outreach_draft", "beta_complete_outreach_draft"], "owner": "desktop_host", "hostTools": ["Gmail.gmail_create_draft"]}
       ],
       "invented_stage": "workflow_book_and_outreach",
       "invented_test": "preinstall-packaged-workflows-invented.test.mjs",
-      "dependencies": ["plugins/csm-copilot-beta/mcp/journey-a-cta-queue.mjs", "plugins/csm-copilot-beta/mcp/journey-a-contact-evidence.mjs", "plugins/csm-copilot-beta/mcp/product-analytics-sources.mjs", "plugins/csm-copilot-beta/mcp/account-evidence-read-plan.mjs", "plugins/csm-copilot-beta/mcp/journey-orchestrator.mjs", "plugins/csm-copilot-beta/mcp/outreach-recipient-handoff.mjs", "plugins/csm-copilot-beta/mcp/outreach-email-preparation.mjs", "plugins/csm-copilot-beta/mcp/outreach-draft-delivery.mjs", "plugins/csm-copilot-beta/mcp/renewal-source-resolver.mjs", "plugins/csm-copilot-beta/mcp/setup-wizard.mjs"]
+      "dependencies": ["plugins/csm-copilot-beta/mcp/journey-a-cta-queue.mjs", "plugins/csm-copilot-beta/mcp/journey-a-contact-evidence.mjs", "plugins/csm-copilot-beta/mcp/product-analytics-sources.mjs", "plugins/csm-copilot-beta/mcp/account-evidence-read-plan.mjs", "plugins/csm-copilot-beta/mcp/journey-orchestrator.mjs", "plugins/csm-copilot-beta/mcp/outreach-recipient-handoff.mjs", "plugins/csm-copilot-beta/mcp/outreach-email-preparation.mjs", "plugins/csm-copilot-beta/mcp/outreach-evidence-context.mjs", "plugins/csm-copilot-beta/mcp/outreach-draft-delivery.mjs", "plugins/csm-copilot-beta/mcp/renewal-source-resolver.mjs", "plugins/csm-copilot-beta/mcp/setup-wizard.mjs"]
     },
     "renewal_preparation": {
       "runtime_name": "renewal_conversation_brief",

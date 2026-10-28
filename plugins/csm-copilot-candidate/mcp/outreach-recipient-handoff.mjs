@@ -65,6 +65,23 @@ export class OutreachRecipientHandoffs {
     source.cleanup.unref?.();
     this.#sources.set(evidenceRunRef, source);
   }
+  readContactEmail(record, { ownerRef, revision, evidenceRunRef, contactRef, explicitEmailRequest }) {
+    if (explicitEmailRequest !== true) throw new BetaError('EMAIL_DISCLOSURE_NOT_AUTHORIZED', 'Show the verified address only when the CSM explicitly requests it.');
+    const current = context(record, ownerRef, revision);
+    this.prune();
+    const source = this.#sources.get(evidenceRunRef);
+    if (!source) throw new BetaError('OUTREACH_RECIPIENT_EXPIRED', 'The verified address expired or the process restarted. Read fresh evidence; do not reconstruct an address from its receipt.');
+    if (source.ownerRef !== ownerRef || source.caseId !== record.case_id || source.accountRefDigest !== record.journey_state.account_ref_digest
+      || current.contact_verification?.completed_evidence_digest !== hash(evidenceRunRef)) {
+      throw new BetaError('OUTREACH_RECIPIENT_MISMATCH', 'These verified details do not belong to the current account evidence.');
+    }
+    const contact = source.contacts.get(contactRef);
+    if (!contact) throw new BetaError('CONTACT_RECIPIENT_NOT_VERIFIED', 'This contact has no verified usable address in the current account read.');
+    return { status: 'verified_contact_email', ...contact, revision,
+      expires_at: new Date(source.expiresAt).toISOString(),
+      source: 'Current selected-account native contact evidence', approval_recorded: false, gmail_draft_created: false,
+      next_action: 'Show this exact verified address. Reading it does not select a recipient, approve an email or authorize a Gmail draft.' };
+  }
   select(record, { ownerRef, revision, evidenceRunRef, contactRef, contactRefs }) {
     const current = context(record, ownerRef, revision);
     const refs = selectionRefs(contactRef, contactRefs);

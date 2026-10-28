@@ -93,6 +93,7 @@ import { assessLoadedPackageVersion, recordWorkflowOutcome, summarizeWorkflowRea
 import { expectedReleaseComponents, assertRendererCompatibility } from "./release-compatibility.mjs";
 import { bindOutreachDraftReview, claimOutreachDraft, completeOutreachDraft } from "./outreach-draft-delivery.mjs";
 import { OutreachRecipientHandoffs } from "./outreach-recipient-handoff.mjs";
+import { prepareOutreachEmail, projectOutreachEmail, saveOutreachEmail, outreachEmailReviewStatus } from "./outreach-email-preparation.mjs";
 import {
   composeShortlistEvidence,
   mergeFastContactDetails,
@@ -120,6 +121,7 @@ import {
   renewalPreparationChoice,
 } from "./renewal-conversation-brief.mjs";
 import { PersistentSnowflakeSession } from "./persistent-snowflake-session.mjs";
+import { continueRenewalPreparation } from "./renewal-preparation-delivery.mjs";
 import { getRenewalSequenceGuidance } from "./renewal-sequence-guidance.mjs";
 import { authorizeGoogleDesktop, googleAccessToken } from "./google-oauth.mjs";
 import { NativeRenewalSourceBridge } from "./renewal-source-resolver.mjs";
@@ -767,6 +769,10 @@ function writeCase(record) {
   fs.writeFileSync(casePath(record.case_id), `${JSON.stringify(record, null, 2)}\n`, { mode: 0o600 });
 }
 
+const outreachEmailScopeProperties = {
+  email_ref: { type: "string", pattern: "^[a-f0-9-]{36}$", description: "Individual email reference from beta_prepare_outreach_email; always pair with email_revision." },
+  email_revision: { type: "integer", minimum: 1, description: "This email's wording revision; revision remains the shared case revision." },
+};
 const tools = [
   {
     name: "beta_setup_status",
@@ -1636,11 +1642,26 @@ const tools = [
   },
   {
     name: "beta_prepare_renewal_conversation_brief",
-    description: "Start one managed renewal-evidence run for a selected P0–P4 renewal CTA. It returns AccountIntelligenceCoreV1: the shared CSM account brief used by renewal and full planning, with every unavailable field stated explicitly. It includes CTA, Gainsight account context, profile, entitlement/adoption, team/setup, tech stack, support trends, and a non-blocking 180-day account-level Gong metadata digest. It never runs contact research, Gmail, Salesforce activity, transcript processing, QBR Express, raw CLI tools, or toolkit reports.",
+    description: "Start one managed renewal-evidence run for a selected P0–P4 renewal CTA. Immediately execute its continuation_request through beta_continue_renewal_preparation until it returns the complete prepared answer; do not ask the CSM for another prompt. It returns AccountIntelligenceCoreV1: the shared CSM account brief used by renewal and full planning, with every unavailable field stated explicitly. It includes CTA, Gainsight account context, profile, entitlement/adoption, team/setup, tech stack, support trends, and a non-blocking 180-day account-level Gong metadata digest. It never runs contact research, Gmail, Salesforce activity, transcript processing, QBR Express, raw CLI tools, or toolkit reports.",
     inputSchema: {
       type: "object",
       properties: { case_id: { type: "string" }, work_item_ref: { type: "string", pattern: "^[a-f0-9]{64}$" } },
       required: ["case_id", "work_item_ref"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "beta_continue_renewal_preparation",
+    description: "Default renewal continuation: wait on the existing selected-account read and return the complete approved brief, all customer-content candidates, authorized temporary chart Markdown and one next action. Never restart sources, create a draft or record approvals. Copy its first text block verbatim as the answer, including the opening note, headings, capitalization, punctuation and next action. Do not polish, restyle or append another chart offer or selection request; only the existing recent-call Summary/Next steps cells may be paraphrased from the same cached notes.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        case_id: { type: "string" },
+        renewal_conversation_run_id: { type: "string", pattern: "^[0-9a-f-]{36}$" },
+        wait_seconds: { type: "integer", minimum: 0, maximum: 25, default: 25 },
+        local_file_delivery_authorized: { type: "boolean", default: false },
+      },
+      required: ["case_id", "renewal_conversation_run_id"],
       additionalProperties: false,
     },
   },
@@ -1794,8 +1815,8 @@ const tools = [
     },
   },
   {
-    name: "beta_get_verified_outreach_recipient",
-    description: "Return one selected contact's verified address from the completed native same-account read for email review only. Names and addresses remain expiring memory; this neither approves the contact nor creates a Gmail draft. No caller-supplied email or raw source ID is accepted.",
+    name: "beta_prepare_outreach_email",
+    description: "Prepare one SEPARATE email for one verified contact, reusing this case's existing account evidence, contacts and current guide. For a second contact, call this again for that contact; it never adds them to the first email. Copy the complete contact_ref exactly. Immediately compose and SHOW THE COMPLETE UNAPPROVED CHAT EMAIL from existing evidence, guide and requested chat wording. This tool supplies the recipient and review scope, not subject/body generation; a pending contact/template/wording gate must not withhold the preview. Those approvals remain required before Gmail creation. Returns one recipient and email_ref/email_revision for this email's own approval, wording and draft controls. Other emails and their approvals or draft receipts stay unchanged. Repeated requests reuse the existing email; no source read, approval or Gmail draft is created.",
     inputSchema: { type: "object", properties: {
       case_id: { type: "string" }, revision: { type: "integer", minimum: 1 },
       contact_evidence_run_id: { type: "string", pattern: "^[0-9a-f-]{36}$" },
@@ -1803,19 +1824,29 @@ const tools = [
     }, required: ["case_id", "revision", "contact_evidence_run_id", "contact_ref"], additionalProperties: false },
   },
   {
+    name: "beta_get_verified_outreach_recipient",
+    description: "For separate emails to different contacts, use beta_prepare_outreach_email instead. This legacy handoff only changes the To field WITHIN ONE email when the CSM explicitly requests that. This handoff updates the case's selected recipients and returns its exact verified To list. Call it for EVERY To change within that email, including removal, even when the remaining addresses are already known. Editing only the chat header leaves the old case receipt and approvals unchanged. Only for an explicitly requested shared-To email, supply all chosen contact_refs in ONE call; never loop over single contacts. Copy each complete 64-character contact_ref exactly from the existing verified shortlist; never shorten or reconstruct it. Correct a malformed reference from that shortlist without source rereads; it is not evidence of a missing address. Use contact_ref only for a single recipient. Supply exactly one selection field. Reuse the same case, evidence run and valid guide; this does not start source reads. Use the returned To string verbatim and its address_digest for review/claim. Addresses stay in expiring memory; no approval or Gmail draft is created. No caller-supplied email or raw source ID is accepted.",
+    inputSchema: { type: "object", properties: {
+      case_id: { type: "string" }, revision: { type: "integer", minimum: 1 },
+      contact_evidence_run_id: { type: "string", pattern: "^[0-9a-f-]{36}$" },
+      contact_ref: { type: "string", pattern: "^[a-f0-9]{64}$" },
+      contact_refs: { type: "array", minItems: 1, maxItems: 100, uniqueItems: true, items: { type: "string", pattern: "^[a-f0-9]{64}$" }, description: "Complete selected recipient list for one same-account email; replaces the prior To list atomically." },
+    }, required: ["case_id", "revision", "contact_evidence_run_id"], additionalProperties: false },
+  },
+  {
     name: "beta_bind_outreach_draft_review",
     description: "Freeze only the digest of the exact displayed email and its native verified-recipient receipt before final approval. Never submit email content or addresses.",
-    inputSchema: {type:"object",properties:{case_id:{type:"string"},revision:{type:"integer",minimum:1},content_digest:{type:"string",pattern:"^[a-f0-9]{64}$"},recipient_ref:{type:"string",pattern:"^[0-9a-f-]{36}$"},to_digest:{type:"string",pattern:"^[a-f0-9]{64}$"}},required:["case_id","revision","content_digest"],additionalProperties:false},
+    inputSchema: {type:"object",properties:{...outreachEmailScopeProperties,case_id:{type:"string"},revision:{type:"integer",minimum:1},content_digest:{type:"string",pattern:"^[a-f0-9]{64}$"},recipient_ref:{type:"string",pattern:"^[0-9a-f-]{36}$"},to_digest:{type:"string",pattern:"^[a-f0-9]{64}$"}},required:["case_id","revision","content_digest"],additionalProperties:false},
   },
   {
     name: "beta_claim_outreach_draft",
     description: "Authorize one host-native unsent Gmail draft for the exact reviewed content; repeated or uncertain writes stop for reconciliation.",
-    inputSchema: {type:"object",properties:{case_id:{type:"string"},revision:{type:"integer",minimum:1},content_digest:{type:"string",pattern:"^[a-f0-9]{64}$"},recipient_ref:{type:"string",pattern:"^[0-9a-f-]{36}$"},to_digest:{type:"string",pattern:"^[a-f0-9]{64}$"},private_draft_authorized:{type:"boolean"}},required:["case_id","revision","content_digest","private_draft_authorized"],additionalProperties:false},
+    inputSchema: {type:"object",properties:{...outreachEmailScopeProperties,case_id:{type:"string"},revision:{type:"integer",minimum:1},content_digest:{type:"string",pattern:"^[a-f0-9]{64}$"},recipient_ref:{type:"string",pattern:"^[0-9a-f-]{36}$"},to_digest:{type:"string",pattern:"^[a-f0-9]{64}$"},private_draft_authorized:{type:"boolean"}},required:["case_id","revision","content_digest","private_draft_authorized"],additionalProperties:false},
   },
   {
     name: "beta_complete_outreach_draft",
     description: "Record a confirmed host Gmail draft result without its identifier, recipient or text. An ambiguous failure never authorizes a duplicate retry.",
-    inputSchema: {type:"object",properties:{case_id:{type:"string"},revision:{type:"integer",minimum:1},draft_request_ref:{type:"string"},provider_draft_created:{type:"boolean"}},required:["case_id","revision","draft_request_ref","provider_draft_created"],additionalProperties:false},
+    inputSchema: {type:"object",properties:{...outreachEmailScopeProperties,case_id:{type:"string"},revision:{type:"integer",minimum:1},draft_request_ref:{type:"string"},provider_draft_created:{type:"boolean"}},required:["case_id","revision","draft_request_ref","provider_draft_created"],additionalProperties:false},
   },
   {
     name: "beta_record_journey_a_approval",
@@ -1824,6 +1855,7 @@ const tools = [
       type: "object",
       properties: {
         case_id: { type: "string" }, gate: { type: "string", enum: JOURNEY_A_GATES },
+        ...outreachEmailScopeProperties,
         revision: { type: "integer", minimum: 1 }, note: { type: "string", maxLength: 240 },
         renewal_source_mode: { type: "string", enum: ["current_sequence", "evidence_only"], description: "Only at template_preview: record the CSM's explicit choice to use the currently read guide or proceed without sequence wording. This never skips contact or email approval." },
       },
@@ -2256,11 +2288,13 @@ async function callTool(name, args = {}) {
     "beta_complete_journey_a_contact_evidence",
     "beta_record_journey_a_approval",
     "beta_get_verified_outreach_recipient",
+    "beta_prepare_outreach_email",
     "beta_bind_outreach_draft_review",
     "beta_claim_outreach_draft",
     "beta_complete_outreach_draft",
     "beta_get_renewal_preparation_options",
     "beta_prepare_renewal_conversation_brief",
+    "beta_continue_renewal_preparation",
     "beta_wait_for_renewal_conversation_evidence",
     "beta_get_renewal_conversation_evidence",
     "beta_add_renewal_csm_context",
@@ -2966,6 +3000,12 @@ async function callTool(name, args = {}) {
   ) {
     throw new BetaError("CASE_VERSION_MISMATCH", "The case was created with a different approved package.");
   }
+  if (record.outreach_emails?.some(email => ["create_requested", "needs_reconciliation"].includes(email.outreach_delivery?.state))
+      && new Set(["beta_register_selected_account", "beta_run_journey_a_contact_evidence", "beta_complete_journey_a_contact_evidence",
+        "beta_bind_journey_context", "beta_resolve_renewal_sequence", "beta_continue_renewal_sequence", "beta_start_journey",
+        "beta_handoff_journey", "beta_prepare_renewal_conversation_brief"]).has(name)) {
+    throw new BetaError("DRAFT_RECONCILIATION_REQUIRED", "Reconcile the pending email result before replacing its shared account context or guide. Other contacts can still have separate emails using the current research.");
+  }
   if (
     activeRenewalBlocksContactResearch(record)
     && [
@@ -2973,6 +3013,7 @@ async function callTool(name, args = {}) {
       "beta_continue_journey_a_contact_evidence",
       "beta_complete_journey_a_contact_evidence",
       "beta_get_verified_outreach_recipient",
+      "beta_prepare_outreach_email",
       "beta_run_bulk_contact_research",
       "beta_verify_bulk_contact_emails",
       "beta_get_bulk_contact_email_verification",
@@ -2984,6 +3025,63 @@ async function callTool(name, args = {}) {
       "RENEWAL_CONTEXT_ACTIVE",
       "Renewal preparation is active for this account. Use the renewal evidence tools, or explicitly leave the renewal flow before starting contact or relationship research.",
     );
+  }
+  const emailControls = new Set(["beta_record_journey_a_approval", "beta_bind_outreach_draft_review", "beta_claim_outreach_draft", "beta_complete_outreach_draft"]);
+  const scopedEmail = args.email_ref !== undefined || args.email_revision !== undefined;
+  if (scopedEmail || (emailControls.has(name) && record.outreach_emails?.length && !record.outreach_identity_receipt)) {
+    if (!emailControls.has(name)) throw new BetaError("INVALID_INPUT", "Email references apply only to this email's approval and draft controls.");
+    const properties = tools.find(tool => tool.name === name).inputSchema.properties;
+    if (Object.keys(args).some(key => !Object.hasOwn(properties, key))) throw new BetaError("INVALID_INPUT", "Use only this email's returned scope, verified-recipient receipt and review/draft fields. Caller-supplied addresses or copy are not accepted by the review controls.");
+    validateRealBetaRuntime({ credentialState: runtime.limitedBetaRuntime, manifest: runtime.manifest });
+    if (record.case_kind !== "real_authorized_journey_a") throw new BetaError("INVALID_CASE_KIND", "Use the verified individual email in this outreach case.");
+    const scope = { ownerRef: runtime.testerId, revision: args.revision, emailRef: args.email_ref, emailRevision: args.email_revision };
+    const view = projectOutreachEmail(record, scope);
+    let updated, delivery = null;
+    const receipt = view.outreach_identity_receipt;
+    const assertRecipient = () => activeOutreachRecipientHandoffs.assert(view, { ownerRef: runtime.testerId, revision: view.revision,
+      recipientRef: receipt.receipt_ref, toDigest: receipt.address_digest });
+    const assertGuide = () => {
+      if (view.renewal_source_receipt && view.renewal_source_mode !== "evidence_only") activeNativeRenewalSources.assertReceipt(view, runtime.testerId);
+    };
+    if (name === "beta_record_journey_a_approval") {
+      if (!["contact_selection", "template_preview", "outreach_draft"].includes(args.gate)) throw new BetaError("OUTREACH_SHARED_REVIEW_REQUIRED", "Work and account reviews belong to the shared case; review this email's contact, template and wording separately.");
+      if (args.renewal_source_mode && args.gate !== "template_preview") throw new BetaError("RENEWAL_SOURCE_DECISION_GATE_REQUIRED", "Record guide applicability only at this email's template review.");
+      const mode = args.renewal_source_mode || view.renewal_source_mode;
+      if (mode === "current_sequence" && !view.renewal_source_receipt) throw new BetaError("RENEWAL_SEQUENCE_COPY_REQUIRED", "Read the current approved guide before approving sequence-based wording.");
+      if (view.renewal_source_receipt && mode !== "evidence_only" && ["template_preview", "outreach_draft"].includes(args.gate)) activeNativeRenewalSources.assertReceipt(view, runtime.testerId);
+      assertRecipient();
+      updated = approveJourneyAGate(view, { gate: args.gate, revision: view.revision, testerId: runtime.testerId, note: args.note });
+      if (args.renewal_source_mode) updated.renewal_source_mode = args.renewal_source_mode;
+    } else if (name === "beta_bind_outreach_draft_review") {
+      assertGuide();
+      activeOutreachRecipientHandoffs.assert(view, { ownerRef: runtime.testerId, revision: view.revision, recipientRef: args.recipient_ref, toDigest: args.to_digest });
+      updated = bindOutreachDraftReview(view, { testerId: runtime.testerId, revision: view.revision, contentDigest: args.content_digest });
+      activeOutreachRecipientHandoffs.advanceReview(view, updated, { ownerRef: runtime.testerId });
+    } else if (name === "beta_claim_outreach_draft") {
+      assertPerformanceMetricsSettled(record.case_id);
+      if (!view.outreach_delivery || view.outreach_delivery.state === "review_ready") {
+        assertGuide();
+        activeOutreachRecipientHandoffs.assert(view, { ownerRef: runtime.testerId, revision: view.revision, recipientRef: args.recipient_ref, toDigest: args.to_digest });
+      }
+      const claimed = claimOutreachDraft(view, { testerId: runtime.testerId, revision: view.revision, contentDigest: args.content_digest, privateDraftAuthorized: args.private_draft_authorized });
+      updated = claimed.record; delivery = claimed.delivery;
+    } else {
+      updated = completeOutreachDraft(view, { testerId: runtime.testerId, revision: view.revision, requestRef: args.draft_request_ref, providerDraftCreated: args.provider_draft_created });
+      delivery = { status: updated.outreach_delivery.state, unsent_only: true };
+    }
+    const saved = saveOutreachEmail(record, updated, scope);
+    writeCase(saved); // A separate message's write lease is persisted before invoking Gmail.
+    return textResult({ ...outreachEmailReviewStatus(saved, scope.emailRef), ...(delivery || {}),
+      next_action: "Continue this email using its email_ref and email_revision. Other emails and shared account research are unchanged; no communication was sent." });
+  }
+  if (name === "beta_prepare_outreach_email") {
+    if (Object.keys(args).some(key => !["case_id", "revision", "contact_evidence_run_id", "contact_ref"].includes(key))) throw new BetaError("INVALID_INPUT", "Use one selected contact reference and the existing account case and evidence run. Do not submit addresses or a combined recipient list.");
+    validateRealBetaRuntime({ credentialState: runtime.limitedBetaRuntime, manifest: runtime.manifest });
+    if (record.case_kind !== "real_authorized_journey_a") throw new BetaError("INVALID_CASE_KIND", "Use the current verified outreach account preparation.");
+    assertPerformanceMetricsSettled(record.case_id);
+    const prepared = prepareOutreachEmail(record, { ownerRef: runtime.testerId, revision: args.revision, evidenceRunRef: args.contact_evidence_run_id, contactRef: args.contact_ref, handoffs: activeOutreachRecipientHandoffs });
+    writeCase(prepared.record);
+    return textResult({ ...prepared.email, account_research_reused: true, source_reads_started: false });
   }
   if (name === "beta_case_status") return textResult(publicCaseStatus(record));
   if (name === "beta_record_language_review") {
@@ -3470,7 +3568,21 @@ async function callTool(name, args = {}) {
       revision: updated.revision,
       selected_cta: run.selectedCta,
       notice_after_seconds: RENEWAL_EVIDENCE_NOTICE_MS / 1000,
+      continuation_request: { tool: "beta_continue_renewal_preparation", arguments: {
+        case_id: updated.case_id, renewal_conversation_run_id: runId, wait_seconds: 25,
+      } },
       next_action: "Continue waiting automatically. Do not ask the CSM to send another message or start contact research.",
+    });
+  }
+  if (name === "beta_continue_renewal_preparation") {
+    validateRealBetaRuntime({ credentialState: runtime.limitedBetaRuntime, manifest: runtime.manifest });
+    return continueRenewalPreparation({ caseId: record.case_id, runId: args.renewal_conversation_run_id,
+      ownerRef: runtime.testerId, packageVersion: runtime.manifest.package_version,
+      waitSeconds: args.wait_seconds ?? 25, localFileDeliveryAuthorized: args.local_file_delivery_authorized ?? false,
+      getRun: () => { pruneJourneyARuntimeState(); return renewalRunFor({ caseId: record.case_id,
+        runId: args.renewal_conversation_run_id, testerId: runtime.testerId }); },
+      getCase: () => readCase(record.case_id), projectEvidence: run => renewalCsmEvidence(run),
+      createChart: ({ display, chartId, ...scope }) => temporaryAccountBriefChartFiles.create(accountBriefChartResult(display, chartId), scope),
     });
   }
   if (name === "beta_wait_for_renewal_conversation_evidence") {
@@ -4184,11 +4296,18 @@ async function callTool(name, args = {}) {
     return textResult({ ...publicCaseStatus(updated), workflow: publicJourneyStatus(updated) });
   }
   if (name === "beta_get_verified_outreach_recipient") {
+    if (Object.keys(args).some(key => !["case_id", "revision", "contact_evidence_run_id", "contact_ref", "contact_refs"].includes(key))) {
+      throw new BetaError("INVALID_INPUT", "Use only the current case, revision, evidence run and selected contact references. Caller-supplied addresses are not accepted.");
+    }
+    const references = args.contact_refs === undefined ? (args.contact_ref === undefined ? [] : [args.contact_ref]) : args.contact_refs;
+    if (Array.isArray(references) && references.some(ref => typeof ref !== "string" || !/^[a-f0-9]{64}$/.test(ref))) {
+      throw new BetaError("INVALID_OUTREACH_RECIPIENT_REFERENCE", "Copy every complete contact_ref exactly from the existing verified contact shortlist; never shorten or reconstruct it. The current selection is unchanged. Correct this request from that shortlist; do not restart the case or contact read.");
+    }
     validateRealBetaRuntime({ credentialState: runtime.limitedBetaRuntime, manifest: runtime.manifest });
     if (record.case_kind !== "real_authorized_journey_a") throw new BetaError("INVALID_CASE_KIND", "Select a contact from the native outreach account read first.");
     assertPerformanceMetricsSettled(record.case_id);
     const selected = activeOutreachRecipientHandoffs.select(record, { ownerRef: runtime.testerId, revision: args.revision,
-      evidenceRunRef: args.contact_evidence_run_id, contactRef: args.contact_ref });
+      evidenceRunRef: args.contact_evidence_run_id, contactRef: args.contact_ref, contactRefs: args.contact_refs });
     writeCase(selected.record);
     return textResult(selected.handoff);
   }
@@ -4218,7 +4337,8 @@ async function callTool(name, args = {}) {
   if (name === "beta_complete_outreach_draft") {
     const updated=completeOutreachDraft(record,{testerId:runtime.testerId,revision:args.revision,requestRef:args.draft_request_ref,providerDraftCreated:args.provider_draft_created});
     writeCase(updated);
-    if (updated.outreach_delivery.state === "draft_created") activeOutreachRecipientHandoffs.forgetCase(record.case_id);
+    // Other individually reviewed contacts may still need their own email. The
+    // original source timer clears all cached addresses at its unchanged expiry.
     return textResult({status:updated.outreach_delivery.state,unsent_only:true,next_action:updated.outreach_delivery.state==="draft_created"?"The provider confirmed an unsent draft; nothing was sent.":"Check the existing Gmail result before another create. Do not automatically retry."});
   }
   if (name === "beta_record_journey_a_contact_verification") {
@@ -4500,7 +4620,7 @@ input.on("line", (line) => {
         protocolVersion: request.params?.protocolVersion || "2025-06-18",
         capabilities: { tools: {} },
         serverInfo: { name: installedPackageManifest.name, version: installedPackageManifest.version },
-        instructions: "Ordinary meeting preparation defaults to account_brief. It needs no meeting date, recording, case or Slides setup. Route and start the named account brief immediately. A finished read supplies display_delivery_request: call that cache-only control and copy its first text block verbatim into the final reply. Preserve the opening read summary, every section, table header and row; only the established recent-call Summary/Next steps cells may be paraphrased from cached notes. Do not request optional display_details unless the CSM explicitly asks for detailed evidence. Put meeting questions after the brief. Missing temporary-image authorization never blocks the brief; offer cached charts once. Explicit recording analysis and all deck approval gates remain separate. Other workflow requirements are unchanged.",
+        instructions: "Ordinary meeting preparation defaults to account_brief. It needs no meeting date, recording, case or Slides setup. Route and start the named account brief immediately. A finished read supplies display_delivery_request: call that cache-only control and copy its first text block verbatim into the final reply. Preserve the opening read summary, every section, table header and row; only the established recent-call Summary/Next steps cells may be paraphrased from cached notes. Do not request optional display_details unless the CSM explicitly asks for detailed evidence. Put meeting questions after the brief. Missing temporary-image authorization never blocks the brief; offer cached charts once. Explicit recording analysis and all deck approval gates remain separate. For selected-CTA Renewal Conversation Brief preparation, immediately execute the start result's continuation_request through beta_continue_renewal_preparation until collection finishes. For default renewal delivery, copy its complete first text block verbatim, including the opening note, headings, capitalization, punctuation, next action, all candidate tables and authorized image Markdown. Do not polish, restyle or append another chart offer or selection request; its structured metadata is not another answer. Do not fetch the brief or each chart separately for this default renewal path. Never infer chart visibility, card selections, approvals or draft authorization. Outreach for different contacts defaults to one SEPARATE email per contact. Call beta_prepare_outreach_email for each selected contact using the same case and completed contact evidence, including when the first email is already reviewed or drafted. Do not add the next contact to the first email. Keep each returned email_ref and email_revision with every email approval, wording-review, claim and completion call; revision remains the shared case revision. Review work and account evidence once, then review each email independently. Immediately show the complete unapproved email after preparation, using the requested chat subject/body/signature or composing from the existing evidence and guide. The native tool returns the verified target and review scope, not the copy. Pending contact, template and wording reviews are reviews of that preview; never withhold it waiting for those approvals. They remain required before Gmail creation. Reuse the current guide and still-valid contacts; never restart the case or source reads for another contact. Only an explicit request to edit the To list inside one email uses beta_get_verified_outreach_recipient; that control does not prepare a second email. Other workflow requirements are unchanged.",
       });
     } else if (request.method === "tools/list") {
       respond(request.id, { tools: visibleTools });

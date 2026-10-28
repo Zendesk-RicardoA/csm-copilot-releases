@@ -361,15 +361,33 @@ export function handoffJourney(
 
 export function publicJourneyStatus(caseRecord) {
   const state = stateFor(caseRecord);
+  const emails = caseRecord.outreach_emails || [];
+  const emailRows = emails.map(email => ({ email_ref: email.email_ref, email_revision: email.revision,
+    status: email.outreach_delivery?.state || 'email_for_review', completed_gates: email.approvals.map(item => item.gate),
+    next_gate: JOURNEY_A_GATES[email.approvals.length] || null }));
+  if (emails.length && caseRecord.outreach_identity_receipt) {
+    const approvals = state.contexts.journey_a.approvals || [];
+    emailRows.unshift({ legacy_email: true, email_ref: null, email_revision: null,
+      status: caseRecord.outreach_delivery?.state || 'email_for_review', completed_gates: approvals.map(item => item.gate),
+      next_gate: JOURNEY_A_GATES[approvals.length] || null });
+  }
+  const created = emailRows.filter(email => email.status === 'draft_created').length;
+  const separateEmails = emails.length ? {
+    state: emailRows.some(email => ['create_requested', 'needs_reconciliation'].includes(email.status)) ? 'needs_reconciliation'
+      : created === emailRows.length ? 'drafts_created' : 'in_review',
+    email_count: emailRows.length, drafts_created: created, emails: emailRows,
+  } : null;
   return {
     schema_version: state.schema_version,
+    ...(separateEmails ? { separate_emails: separateEmails } : {}),
     active_workflow: WORKFLOW_NAMES[state.active_journey],
     active_workflow_label: JOURNEY_LABELS[state.active_journey],
     account_context_bound: Boolean(state.account_ref_digest),
     workflows: Object.fromEntries(Object.entries(state.contexts).map(([journey, value]) => [WORKFLOW_NAMES[journey], {
       label: JOURNEY_LABELS[journey],
-      status: value.status,
-      ...(journey === "journey_a" ? { draft_delivery: caseRecord.outreach_delivery?.state || "not_requested" } : {}),
+      status: journey === 'journey_a' && separateEmails ? separateEmails.state : value.status,
+      ...(journey === "journey_a" ? { draft_delivery: separateEmails?.state || caseRecord.outreach_delivery?.state || "not_requested",
+        ...(separateEmails ? { review_scope: 'per_email' } : {}) } : {}),
       context_bound: Boolean(value.context),
       context_version: value.context?.schema_version || null,
       item_count: value.context?.item_count ?? null,
@@ -383,8 +401,9 @@ export function publicJourneyStatus(caseRecord) {
           source_gap_codes: value.contact_verification.source_gap_codes,
         }
         : null,
-      completed_gates: (journey === "journey_b" ? caseRecord.approvals || [] : value.approvals || []).map((approval) => approval.gate),
-      next_gate: journey === "journey_a" ? JOURNEY_A_GATES[(value.approvals || []).length] || null : nextGate(caseRecord),
+      completed_gates: (journey === "journey_b" ? caseRecord.approvals || [] : separateEmails
+        ? (value.approvals || []).filter(approval => JOURNEY_A_GATES.slice(0, 2).includes(approval.gate)) : value.approvals || []).map((approval) => approval.gate),
+      next_gate: journey === "journey_a" ? (separateEmails ? null : JOURNEY_A_GATES[(value.approvals || []).length] || null) : nextGate(caseRecord),
       ...(journey === "journey_b" ? { account_brief_bound: Boolean(caseRecord.account_intelligence_core), selected_call_evidence_bound: Boolean(caseRecord.derived_evidence) } : {}),
     }])),
     handoffs: state.handoffs.map((item) => ({

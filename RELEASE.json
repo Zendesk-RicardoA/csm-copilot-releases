@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "channel": "candidate",
   "package_name": "csm-copilot-candidate",
-  "package_version": "0.2.27-candidate.live.codex.20261023122647",
-  "package_sha256": "64aa4c8c6e54009a6ffc6d08fe427bf0b55c5be8959612137a1a0eec18b31fe7",
+  "package_version": "0.2.27-candidate.live.codex.20261027130357",
+  "package_sha256": "653fcb0fbf1d87f24ea2fdd7c26b6aa74f635d6079534e95b76f9e41a7a0df41",
   "components": {
     "schema_version": "1.0",
     "renderer_baseline": "recovery-v3",

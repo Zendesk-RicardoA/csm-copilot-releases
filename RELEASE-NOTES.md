@@ -1,30 +1,30 @@
 # Candidate release notes
 
-Package: `0.2.27-candidate.live.codex.20261023122647`
+Package: **0.2.27-candidate.live.codex.20261027130357**.
 
-This is a development candidate for controlled private-marketplace installation testing. Its Git upload is authorized; installation and wider sharing remain separate decisions. It is not the main approved tester release.
+Frozen validation archive SHA-256: 653fcb0fbf1d87f24ea2fdd7c26b6aa74f635d6079534e95b76f9e41a7a0df41.
 
-## Repair
+This is the tested Candidate uploaded to the existing private marketplace. It remains separate from the main approved tester release.
 
-Refreshing changed renewal evidence now keeps the active review at the revision successfully saved for that same run. Earlier approvals are not carried forward. Expired runs, restarted processes, conflicting changes and wrong-account evidence still stop safely.
+## Changes since the previous Git Candidate
 
-The only runtime code change is this renewal revision handoff. Data sources, permissions, timeouts, approved brief formatting, workflow instructions and both private builders are unchanged.
+- Renewal preparation continues the existing evidence collection and returns the approved brief, authorized temporary charts and one next action. It reuses the active run without creating duplicate reads, approvals or drafts.
+- Selecting a second outreach contact prepares a second email with one recipient. It reuses the account case, evidence and valid guide, and preserves the first email or existing draft with its independent review and draft status.
+- Every email has its own recipient, exact-wording review, approvals and draft delivery receipt. Preparing another email does not copy approvals from the first.
+- Finishing one draft retains the still-valid contact shortlist until its original expiry, so another contact does not require repeating account research.
+- The complete unapproved email is shown in chat for review. Existing approval gates still block Gmail creation until approved.
+- Workflow status reports individual emails and their next gates. Repeated requests remain idempotent; uncertain writes require reconciliation.
 
-## Verified locally
+## Verified against this frozen artifact
 
-- All 20 automated release stages passed, including the five invented workflows, source and packaged tests, protocol checks, timeout/chart checks and fault injection.
-- Six permanent renewal regression scenarios passed. Their protected baseline was explicitly approved; earlier protected expectations are unchanged.
-- The frozen package and both renderer bundles were verified. The package must not be rebuilt or edited for promotion.
-- Actual-model acceptance is recorded separately and is not a substitute for live acceptance or a rendered human review.
+- All 20 automated stages passed, including source and packaged tests, protocol checks, fault injection and invented runs for all five workflows.
+- Twenty-one permanent separate-email tests cover independent review/delivery, unchanged first emails, reuse, cap, expiry, restart, identity and revision guards.
+- Six fresh invented separate-email model runs passed: three each on GPT-6 Luna and GPT-6 Sol. Independent grading checked tool calls, displayed copy and state.
+- The authorized local installation matched the frozen bytes and started successfully. Setup controls and private profiles were preserved.
+- Both renderer bundles and their contract fingerprints are unchanged. No builder update is included.
 
-## Boundaries and remaining checks
+## Acceptance limits
 
-Earlier owner results remain historical evidence for their exact package. No customer case, expired evidence, wording approval or draft authorization is transferred to this candidate.
+The separate-email model tests used invented accounts and isolated source tools. They performed no live customer reads or real Gmail writes. All five live workflows, visible live charts, rendered human review and a clean non-owner installation were not rechecked for this exact artifact. Earlier approvals remain attached to their original evidence and package; they are not transferred here.
 
-A separately authorized, read-only renewal-resume check completed on this candidate. Both evidence collections completed all 18 reads. Restart discarded the old in-memory evidence, the refreshed receipt retained the correct revision, and current-revision selection reached the native-layout check. No wording approval or deck was created. Evidence was unchanged between reads, so the changed-evidence branch is regression-tested, not live-exercised.
-
-Daily Focus timing and unread-reply classification limits remain visible; they are not evidence of an empty workday. The previously disclosed generated-slide resource-label link limitation is not repaired by this change.
-
-Before wider distribution, complete the required candidate acceptance, a clean non-owner marketplace installation and first-run setup, and explicit approval to share. A candidate upload, installation, private builder update and customer draft are separate operations.
-
-Keep private setup controls, credentials, customer evidence, feedback configuration and case records outside this repository. Every tester authenticates independently.
+Candidate upload does not authorize a new installation, wider release, customer communication or customer draft. Keep the matching setup file private and authenticate independently. Existing source, retention and approval boundaries remain in force.

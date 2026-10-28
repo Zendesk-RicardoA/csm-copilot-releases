@@ -89,9 +89,30 @@ boundary plainly rather than inferring them from Gong metadata. Use the native G
 link when the selected CTA source returns it; never construct or guess one.
 
 `beta_prepare_renewal_conversation_brief` starts one selected-account run. Immediately call
-`beta_wait_for_renewal_conversation_evidence` with a 25-second wait. If it says it is still
-preparing, continue waiting automatically in the same turn. Never ask the CSM to send another
-message, retry a tool, or diagnose a technical cause. The first evidence pass is bounded to five
+its `continuation_request` through `beta_continue_renewal_preparation`, with a wait of up to
+25 seconds. Reuse the same case/run reference until it finishes. Its first text block is the
+ready-to-display answer, not JSON: copy it verbatim into the final reply, including its opening
+note, headings, capitalization, punctuation and next-action wording. Do not polish or restyle it,
+add a new title, shorten it, drop tables or remove image Markdown. Do not append another chart
+offer or selection request; the prepared answer already contains the appropriate action.
+The structured result and second text block are delivery
+metadata, not another answer to print. Only the established recent-call Summary and Next steps
+cells may be paraphrased from the same cached notes. While `status` is `collecting`, report its
+progress and execute the returned same-run continuation automatically in the same turn. Never
+end with only "still preparing" or ask the CSM to send another message to finish the read.
+Add `local_file_delivery_authorized: true` only when the CSM explicitly authorized temporary
+local chart images for this delivery. The coordinator remembers that authorization only within
+the active run, assembles all available chart Markdown beside support performance, and preserves
+the original expiry. Do not make separate per-chart or brief-getter calls for this default path.
+Without image authorization, deliver the complete brief and candidates now and offer cached
+charts once. A chart gap never blocks the brief. Tool-prepared images are not proof that the CSM
+can see them. No continuation selects cards, records approvals or creates a draft.
+
+The older `beta_wait_for_renewal_conversation_evidence` and
+`beta_get_renewal_conversation_evidence` remain compatibility and explicitly requested cached
+detail/focus controls, not the default preparation path. Do not restart a completed source read
+to change presentation. Never ask the CSM to retry a tool or diagnose a technical cause.
+The first evidence pass is bounded to five
 minutes. Every independent source gets its first-read opportunity before a timed-out source is
 retried. If needed, one recovery pass is capped at five minutes; a source gets at most two attempts.
 Reads stay serial in the managed session. Each statement has at most 120 seconds, with a smaller
@@ -110,8 +131,11 @@ copy or approvals from saved digests. A `SNOWFLAKE_SIGN_IN_REQUIRED` result is a
 executed query timeout or zero CTAs: complete normal Snowflake sign-in before retrying the same
 governed read. Do not change the 25-second CTA deadline or bypass its source.
 
-When the run ends, call `beta_get_renewal_conversation_evidence` and show its concise cached
-`AccountIntelligenceCoreV1` overview before asking for a decision. Read [Brief review](references/brief-review.md)
+When the run ends, the coordinator already returns the concise cached
+`AccountIntelligenceCoreV1` overview and all customer-content candidate tables. Show that first
+text block before asking for its `next_action`; do not append the brief or candidates a second
+time. Use `beta_get_renewal_conversation_evidence` only for an explicit cached focus/detail request
+or a legacy continuation. Read [Brief review](references/brief-review.md)
 for the short default view, complete evidence on request and straightforward review prompts.
 Use its fixed order: account header, CTA
 context, company profile, commercial footprint, product footprint, adoption gaps, team and setup,
@@ -131,7 +155,10 @@ or Gong flow. A cached `display_focus` changes the main view only; full evidence
 
 For every completed renewal evidence result, including `needs_csm_decision`, also show
 `customer_content_review.tables` in their returned order and verbatim. They contain the annual point
-of view, metric candidates, and the complete linked opportunity-and-focus wording. Do not replace
+of view, metric candidates, and the complete linked opportunity-and-focus wording. The default
+coordinator has already rendered these tables in its first text block; do not reconstruct or
+duplicate them. For the legacy getter, show each returned table without changing its content.
+Do not replace
 them with headings, a generic summary, or labels such as “help customers.” When there is at least one
 supported metric and one linked pair, ask the CSM to select one to three metric candidates for
 **Your progress over the past year** and one to three numbered pairs for the other two slides.
@@ -1037,39 +1064,99 @@ State a genuine source gap only after that retry fails; never silently omit the 
 
 ### Gmail draft after chat review
 
+For different selected contacts, the default is **one separate email per contact**. Prepare the
+account once and review its work selection and account evidence once. For each selected contact,
+call `beta_prepare_outreach_email` with the existing case/revision, completed contact-evidence run,
+and that one verified `contact_ref`. For a second person, call it again for that person; keep the
+first email, its approvals and any draft receipt unchanged. Do not add the person to the first
+email, create another case, refresh the queue, repeat research or reread a still-valid guide.
+
+The returned `email_ref` identifies one individual email. Always pass it and `email_revision` to
+`beta_record_journey_a_approval`, `beta_bind_outreach_draft_review`, `beta_claim_outreach_draft` and
+`beta_complete_outreach_draft` for that email. `revision` remains the shared case revision;
+`email_revision` changes only if that email's wording changes. Each email starts with only the
+existing work/account reviews and needs its own contact, guide applicability and exact-wording
+review plus explicit draft authorization. Never copy another email's approvals or receipt.
+
+Immediately compose and show the complete **unapproved chat email** after preparation. The native
+result verifies the recipient and returns the email's review scope; the conversation host writes
+the subject, body and signature from the existing evidence, current guide and requested wording.
+The tool deliberately does not return the copy. Do not refuse to show it because the body was
+not returned. Pending contact, template and wording reviews are reviews of the displayed email;
+they must not block its chat preview. They remain mandatory before Gmail draft creation. If the
+CSM explicitly asks to keep an existing subject, body and signature, use that exact chat copy.
+Do not request another source read or an approval merely to reproduce that requested wording.
+Displaying a draft records no approval and authorizes no write. The shared work/account gates
+remain unchanged, and changed copy still requires its own exact-wording review.
+
+Personalize only from verified evidence and honor any explicit instruction to preserve wording.
+When several individual emails are requested, show each email separately with its one verified
+To address, subject, body and signature. Do not combine their recipients. An explicit review and
+authorization covering all displayed emails can be recorded for each email in the required order.
+Create at most one unsent Gmail draft per authorized email; a repeated request reuses its receipt.
+If the first draft is uncertain, keep that receipt for reconciliation instead of overwriting it.
+Case status exposes each email's progress separately. Contact data still expires at its original
+15-minute deadline; preparing another email never extends it or restores expired data after restart.
+
+The legacy recipient handoff remains for an **explicit edit of the To field within one email**.
+Every such To change requires that native handoff before showing a revised email. This includes
+removing someone or keeping only one person, even if every address is already known in chat.
+`beta_get_verified_outreach_recipient` updates the case's selected recipients and review receipt;
+it is not just an address lookup. Never edit only the displayed To header or claim the case's
+recipients changed without this call. It records selection, not approval or a Gmail write.
+
+Copy each full 64-character `contact_ref` exactly from the existing verified shortlist. Never
+shorten or reconstruct a reference. `INVALID_OUTREACH_RECIPIENT_REFERENCE` means the request
+was malformed, not that an email is unavailable. Correct it from the same shortlist without
+starting the case or evidence reads again; the prior selection remains unchanged.
+
 After the managed contact read finishes, call `beta_complete_journey_a_contact_evidence` to
 record its executed source states. If optional Gmail metadata was not requested, use
 `gmail_metadata_state: "not_requested"` and count zero, with no Gmail failure code; never report
 an unrequested read as checked or unavailable. Bind the reviewed same-account context as usual.
-When the CSM selects a contact, call `beta_get_verified_outreach_recipient` with the current case
-revision, that completed `contact_evidence_run_id`, and the exact returned `contact_ref`.
-The tool returns only that verified contact's address, opaque `recipient_ref`, `address_digest`
-and expiry. Do not reconstruct an email, accept a caller-supplied address as verification, or
+Only when the CSM explicitly requests one email with a shared To list, call
+`beta_get_verified_outreach_recipient` once with the current case revision and the completed
+`contact_evidence_run_id`. For multiple recipients, pass the complete chosen `contact_refs` list
+in that one call; do not loop over single-contact selections. The legacy `contact_ref` remains
+available for one recipient. Supply exactly one selection field. All selected people must have
+verified usable addresses in the same account evidence; one invalid or duplicate address stops
+the whole change without silently dropping anyone.
+The tool returns all selected contacts, the exact comma-separated `to` string, one opaque
+`recipient_ref`, the whole To field's `address_digest` and the original expiry. Use its `to` string
+verbatim in the displayed email and Gmail arguments. Do not reconstruct an email, accept a caller-supplied address as verification, or
 copy an address from another account. Show the chosen address to the CSM for review. This
-disclosure neither records approval nor authorizes a Gmail write. A changed recipient clears
-contact and later approvals; use the returned new revision. Ordinary wording edits retain the
-same verified recipient but require fresh wording approval. Keep address and copy only in
+disclosure neither records approval nor authorizes a Gmail write. Adding, removing or replacing
+recipients reuses the same case, selected CTA, valid account/contact evidence and current guide.
+Do not create another case, refresh the queue, rerun account/contact research or resolve an
+unchanged valid guide merely to change the To list. Pass the full revised selected list and use
+the returned revision. Recipient-dependent and later approvals are cleared; reviewed work/account
+approvals and the valid guide receipt remain. Show the revised recipients and complete email in
+one review prompt, including unchanged guide applicability, then record the required gates in
+order from that explicit review. Never infer approval for the added people.
+Ordinary wording edits retain the same verified recipient list but require fresh wording approval. Keep addresses and copy only in
 host memory, never in case state, files, logs or feedback. The handoff expires after at most
 15 minutes and cannot be recovered from a persisted digest after restart. A fresh read and
 review is required after expiry; do not silently restore old approvals.
 
-Always show the complete outreach email in chat first: recipient role, subject, body, language,
+Always show the complete outreach email in chat first: every recipient and role, subject, body, language,
 personalization evidence used, and source gaps. The CSM reviews this exact version in chat. Do not
 create a Gmail draft before that review.
 
 Before the final `outreach_draft` approval, hash the exact Gmail arguments in memory, including the
-verified recipient, subject, body and signature, and call `beta_bind_outreach_draft_review` with only
+complete verified To string, subject, body and signature, and call `beta_bind_outreach_draft_review` with only
 that digest, current revision, native `recipient_ref`, and `to_digest` equal to SHA-256 of the
-exact returned address. These two fields are required for real outreach cases; leaving them
+exact returned `to` string (equal to the returned `address_digest`, for one or multiple recipients).
+These two fields are required for real outreach cases; leaving them
 optional in the schema only preserves isolated invented-control tests. Show the complete email. A changed email clears its final
 approval; do not carry approval to changed content. After the CSM explicitly approves that version
 and its creation, call `beta_claim_outreach_draft` with the same content digest, recipient reference,
-To-address digest and
+whole-To digest and
 `private_draft_authorized: true`. Use the installed Gmail
-`gmail_create_draft` action to create exactly one unsent draft. Use the selected, verified contact
-address; do not add CC or BCC, attachments, labels, a send time, an enrollment, or a CRM update. Use
+`gmail_create_draft` action to create exactly one unsent draft. Use the exact returned verified
+`to` string; do not add CC or BCC, attachments, labels, a send time, an enrollment, or a CRM update. Use
 a reply message only when the CSM explicitly selected a verified existing thread; otherwise create a
-new draft. Only invoke Gmail when the claim returns `invoke_gmail: true`; `already_created` never
+new draft. For several selected people, use one draft with the exact returned To list, not one
+draft per person. Only invoke Gmail when the claim returns `invoke_gmail: true`; `already_created` never
 permits another create. Keep the exact approved arguments unchanged. If Gmail is not connected,
 complete its normal sign-in before claiming the write. After a provider-confirmed draft result,
 call `beta_complete_outreach_draft` with the request reference and `provider_draft_created: true`.

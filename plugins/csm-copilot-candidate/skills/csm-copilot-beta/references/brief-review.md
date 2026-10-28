@@ -14,6 +14,16 @@ For a finished meeting-prep brief, follow `display_delivery_request` and use
 The display control reuses the owner-bound temporary read without new queries, cases or approvals.
 Preserve the opening read summary and table-header capitalization as well as every returned row.
 
+For default renewal preparation, execute the start result's `continuation_request` through
+`beta_continue_renewal_preparation` until collection finishes. Copy its first text block verbatim
+as the answer, including the opening note, headings, capitalization, punctuation and next action.
+Do not polish, restyle or add another selection request: it already contains the approved ordered overview, complete customer-content candidate
+tables, authorized image Markdown and one next action. Do not shorten it, print the metadata,
+fetch the brief again or call individual chart tools. Explicit temporary-image authorization is
+required before setting `local_file_delivery_authorized: true`. Without it, show the brief and
+candidates now and offer cached charts once. Keep chart preparation separate from actual visibility.
+The old renewal getter remains available for requested cached details and display focus.
+
 Show the returned ordered sections. Lead with account facts, commercial footprint, product use,
 relevant performance and the selected-call findings. Do not reconstruct nested storage-path tables.
 Use one subscription row, one Product/Value row per product and one Date/Call/Summary/Next steps

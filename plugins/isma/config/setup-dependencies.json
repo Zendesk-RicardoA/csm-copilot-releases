@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "product_name": "ISMA",
+  "dependencies": [
+    {"id":"snowflake","title":"Snowflake software and connection","kind":"local_software","workflows":["daily_focus","portfolio_analytics","outreach","meeting_prep","renewal_conversation_brief"],"required":true,"installation":"approved_homebrew"},
+    {"id":"gmail","title":"Gmail","kind":"host_plugin","workflows":["daily_focus","outreach"],"required":true,"installation":"host_plugin","plugin_query":"Gmail"},
+    {"id":"calendar","title":"Google Calendar","kind":"host_plugin","workflows":["daily_focus"],"required":true,"installation":"host_plugin","plugin_query":"Google Calendar"},
+    {"id":"drive","title":"Google Drive, Docs and Slides","kind":"host_plugin","workflows":["outreach","renewal_conversation_brief","selected_call_deck"],"required":true,"installation":"host_plugin","plugin_query":"Google Drive"},
+    {"id":"converge","title":"Converge for Gong calls","kind":"company_mcp","workflows":["meeting_prep","selected_call_deck"],"required":true,"installation":"company_connection"},
+    {"id":"help_center","title":"Zendesk Help Center","kind":"company_mcp","workflows":["selected_call_deck"],"required":true,"installation":"company_connection"},
+    {"id":"slack","title":"Slack","kind":"host_plugin","workflows":["selected_call_deck"],"required":false,"installation":"host_plugin","plugin_query":"Slack"},
+    {"id":"cerebro","title":"Cerebro","kind":"local_plugin","workflows":["service_ownership"],"required":false,"installation":"codex_marketplace","plugin_reference":"cerebro@zendesk-claude-code-plugins"},
+    {"id":"private_master","title":"Private master deck","kind":"private_setup","workflows":["selected_call_deck","renewal_conversation_brief"],"required":true,"installation":"private_setup"},
+    {"id":"private_renderer","title":"Private deck renderer","kind":"private_setup","workflows":["selected_call_deck","renewal_conversation_brief"],"required":true,"installation":"private_setup"}
+  ]
+}

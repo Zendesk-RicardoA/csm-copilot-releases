@@ -1,14 +1,14 @@
 {
-  "name": "csm-copilot-candidate",
+  "name": "isma",
   "interface": {
-    "displayName": "CSM Copilot Candidate"
+    "displayName": "ISMA"
   },
   "plugins": [
     {
-      "name": "csm-copilot-candidate",
+      "name": "isma",
       "source": {
         "source": "local",
-        "path": "./plugins/csm-copilot-candidate"
+        "path": "./plugins/isma"
       },
       "category": "Productivity",
       "policy": {

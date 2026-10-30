@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0",
   "channel": "candidate",
-  "package_name": "csm-copilot-candidate",
-  "package_version": "0.2.27-candidate.live.codex.20261028154814",
-  "package_sha256": "ed66c43076d218e9c502a7517bc4d688b7b757b960fbc99c29d23527dc40af02",
+  "package_name": "isma",
+  "package_version": "0.3.0-isma.live.codex.20261030141816",
+  "package_sha256": "d780011c001dc5251f8050af0523da81dee2d5146e823d4dcd5d6ba597a2576c",
   "components": {
     "schema_version": "1.0",
     "renderer_baseline": "recovery-v3",

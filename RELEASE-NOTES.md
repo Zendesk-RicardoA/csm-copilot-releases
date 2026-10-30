@@ -1,26 +1,13 @@
-# Candidate release notes
+# ISMA release notes
 
-Package: **0.2.27-candidate.live.codex.20261028154814**.
+Package: **0.3.0-isma.live.codex.20261030141816**.
+Frozen package SHA-256: d780011c001dc5251f8050af0523da81dee2d5146e823d4dcd5d6ba597a2576c.
 
-Frozen validation archive SHA-256: ed66c43076d218e9c502a7517bc4d688b7b757b960fbc99c29d23527dc40af02.
+- One ISMA identity and update path replaces parallel Candidate/Test installations.
+- CSM book scope remains authoritative. Managers can search bounded account names, select exactly one account and reuse the existing full brief, outreach and Converge flows. Actual source identity and approved read-only role are checked before account lookup and again on selection. Mode selection grants no permission or inherited book.
+- The dependency checklist distinguishes ready, installed but unchecked, missing, sign-in needed, blocked, optional and not needed. Supported approved installs are verified, resumable and protected from duplicate launches. Missing company/host controls receive a concrete supported handoff.
+- Saved signatures are inserted by the user in Gmail. Signature capture, local-profile verification and signature test drafts no longer block setup or drafting. Existing private signature files remain preserved.
+- The owner removed the package calendar expiry. Other account, evidence, approval and reconciliation controls remain enforced.
+- Same-person migration backs up private settings, preserves existing sign-in/configuration, rejects conflicting destination settings and transfers no cases or approvals. Legacy plugins are removed only after replacement verification.
 
-## Changes
-
-- Completed native account/contact evidence creates its own account-context receipt. Email preparation no longer needs a caller-created context digest.
-- The finished read returns its completion request and the completion control returns the revision to review. Evidence completion grants no approval.
-- An explicit address request uses a read-only lookup of the same verified contact evidence. It changes no recipient, approval, draft or expiry and accepts no caller-supplied address.
-- Polling the contact run preserves its original expiry. Expired or restarted contact memory cannot be reconstructed from a saved digest.
-- The individual-email host fixture now follows native completion without manually injecting account context. Existing independent email reviews and duplicate-draft protection remain in place.
-
-## Verification
-
-- All 20 automated technical stages passed: 1,119 source tests, 683 packaged tests, protocol and fault checks, frozen renderer checks and invented runs for all five workflows.
-- Nine new native-handoff and address-disclosure checks cover the reproduced failure, privacy, source gaps, changed evidence, explicit requests, account/owner/run/revision mismatch, expiry and restart.
-- The local installed files match the frozen package and a fresh MCP process starts with matching loaded, disk and approved versions. Both new and existing outreach controls are registered.
-- Existing credentials, profiles, signature and source permissions are preserved. Renderer components are unchanged; no builder update is included.
-
-## Acceptance limits
-
-The automated tests use invented accounts and Gmail mocks. Fresh actual-model acceptance and live customer/Gmail verification have not been completed for this exact artifact. No customer source read, real Gmail draft, send or Slides build was performed by this installation/update. Earlier acceptance remains attached to its original artifact.
-
-This private Candidate update was explicitly authorized. It does not approve wider distribution or customer communications. Keep the matching private setup file outside Git and authenticate independently.
+All twenty technical stages passed: 1,140 source tests, 704 packaged tests, all five invented workflows, native protocols, frozen renderer execution and protected regressions. The installed payload matches the frozen package. Both migrated and empty private profiles started successfully and exposed all required controls. Earlier model/live/human acceptance is not relabeled as current acceptance. No customer read, actual Gmail draft, send, Slides build or builder update was performed by installation.

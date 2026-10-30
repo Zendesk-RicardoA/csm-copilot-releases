@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "isma": {
+      "title": "ISMA",
+      "description": "ISMA: governed CSM and manager account preparation with guided setup and approved private drafts.",
+      "cwd": ".",
+      "command": "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node",
+      "args": [
+        "./mcp/server.mjs",
+        "--stdio"
+      ],
+      "default_tools_approval_mode": "approve",
+      "tools": {
+        "beta_connect_snowflake_zdp": {
+          "approval_mode": "prompt"
+        },
+        "beta_configure_snowflake_zdp": {
+          "approval_mode": "prompt"
+        },
+        "beta_authorize_owner_assisted_test": {
+          "approval_mode": "prompt"
+        },
+        "beta_render_private_draft": {
+          "approval_mode": "prompt"
+        }
+      },
+      "env": {
+        "CSM_COPILOT_BETA_STATE_NAMESPACE": "isma-live",
+        "CSM_COPILOT_BETA_DISABLE_OWNER_ASSISTED": "true"
+      }
+    }
+  }
+}

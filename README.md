@@ -1,8 +1,8 @@
 # ISMA private marketplace
 
-Current package: **0.3.1-isma.live.codex.20261030162033**. One plugin serves CSMs and managers.
+Current package: **0.3.2-isma.live.codex.20261030170325**. One plugin serves CSMs and managers.
 
-Give each colleague access to this private repository. They can then install ISMA from this Git marketplace and start **ISMA setup**. Setup automatically downloads and verifies this installed version's matching private release asset. No setup attachment needs to be sent or pasted into chat. Each person uses their own GitHub access and company sign-in; installation grants no data permissions.
+Give each colleague access to this private repository. For a first installation, copy this repository’s exact HTTPS clone URL from GitHub and run `codex plugin marketplace add <REPOSITORY_GIT_URL> --ref main`, then `codex plugin add isma@isma`. Replace the placeholder with that URL. Do not silently register a downloaded local folder; existing local registrations need their source replaced while preserving private settings. They can then install ISMA from this Git marketplace and start **ISMA setup**. Setup automatically downloads and verifies this installed version's matching private release asset. No setup attachment needs to be sent or pasted into chat. Each person uses their own GitHub access and company sign-in; installation grants no data permissions.
 
 For an existing installation, run `codex plugin marketplace upgrade isma`, then `codex plugin add isma@isma`, restart into a fresh chat and run ISMA setup. The helper obtains the exact new version's setup, checks GitHub's asset size and SHA-256 digest and verifies the frozen release proof, full plugin inventory, private controls and renderer contracts before any local setup import. A valid private cache is reused when setup resumes. GitHub sign-in, access/SSO, missing-release and network failures have distinct next steps; do not reinstall repeatedly or edit manifests.
 

@@ -4,10 +4,15 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
+import {createRequire} from 'node:module';
+import {Buffer} from 'node:buffer';
 import {BetaError, validatePackagePreflight} from './core.mjs';
-import Native from './approved-native-contract.js';
 import {assertInstallableReleaseDescriptor} from './release-compatibility.mjs';
 import {downloadMatchingSetup} from './marketplace-setup-download.mjs';
+
+// The host REPL uses a different ESM loader. Load the unchanged portable
+// CommonJS renderer contract explicitly instead of relying on inferred exports.
+const Native = createRequire(import.meta.url)('./approved-native-contract.js');
 
 export const MARKETPLACE_CONTROL_FILES = Object.freeze([
   'approved-version-manifest.json', 'limited-beta-runtime.json', 'feedback-form.json', 'snowflake-setup-template.json',
@@ -19,6 +24,10 @@ const safeName = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const email = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 const encode = value => JSON.stringify(value, null, 2) + '\n';
 const fail = (code, message) => { throw new BetaError(code, message); };
+function requireStandaloneRuntime() {
+  if (typeof process === 'undefined')
+    fail('MARKETPLACE_SETUP_STANDALONE_REQUIRED', 'Run the helper with the existing desktop Node executable as a standalone child process. The embedded JavaScript runner cannot perform setup; retain the existing authorization and login hint.');
+}
 
 function readFile(file, maximum = 2 * 1024 * 1024) {
   const stat = fs.lstatSync(file);
@@ -119,10 +128,27 @@ const outcome = (metadata, state, changed = false) => ({state, package_version: 
     : 'Run the bundled setup download command to acquire the matching private GitHub release setup. Do not run customer workflows or edit approval files.'});
 
 export async function downloadMarketplaceSetup(options = {}) {
+  requireStandaloneRuntime();
   const resolved = locations(options);
   return downloadMatchingSetup({...options, ...resolved,
     inspectSetup: () => inspectMarketplaceSetup(resolved),
     verifySetup: setupFile => verifyMarketplaceSetup({...resolved, setupFile})});
+}
+
+export function parseMarketplaceSetupInput(text) {
+  if (typeof text !== 'string' || !text.trim())
+    fail('MARKETPLACE_SETUP_INPUT_REQUIRED', 'The apply helper received no request. Run it as a child process with piped standard input and write the authorized setup JSON before waiting for completion. Do not repeat an empty apply command.');
+  if (Buffer.byteLength(text, 'utf8') > 8192)
+    fail('MARKETPLACE_SETUP_INVALID', 'Supply only the bounded setup path, local authorization and own login hint through standard input, not setup-file contents.');
+  let input;
+  try { input = JSON.parse(text); }
+  catch { fail('MARKETPLACE_SETUP_INVALID', 'Supply a valid JSON setup request through the child process standard input. Do not put private values in shell arguments.'); }
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+      || !same(Object.keys(input).sort(), ['local_configuration_authorized', 'setup_file', 'login_hint'].sort())
+      || typeof input.setup_file !== 'string' || !path.isAbsolute(input.setup_file)
+      || typeof input.local_configuration_authorized !== 'boolean' || typeof input.login_hint !== 'string')
+    fail('MARKETPLACE_SETUP_INVALID', 'Use the supported request with only an absolute setup_file path, boolean local_configuration_authorized and the own login_hint.');
+  return input;
 }
 
 export function inspectMarketplaceSetup(options = {}) {
@@ -147,12 +173,14 @@ function assertSafeStateDirectory(directory) {
   for (const target of [path.dirname(directory), directory]) {
     if (!fs.existsSync(target) && !fs.lstatSync(target, {throwIfNoEntry: false})) continue;
     const stat = fs.lstatSync(target);
-    if (stat.isSymbolicLink() || !stat.isDirectory() || typeof process.getuid === 'function' && stat.uid !== process.getuid()
+    const uid = os.userInfo().uid;
+    if (stat.isSymbolicLink() || !stat.isDirectory() || uid >= 0 && stat.uid !== uid
         || stat.mode & 0o022) fail('MARKETPLACE_SETUP_UNSAFE', 'Preserve the existing private-state directory; a safe, operator-owned directory is required.');
   }
 }
 
 export function applyMarketplaceSetup(options = {}) {
+  requireStandaloneRuntime();
   if (options.localConfigurationAuthorized !== true)
     fail('MARKETPLACE_SETUP_APPROVAL_REQUIRED', 'Explicit local setup authorization is required. No configuration was changed.');
   if (typeof options.loginHint !== 'string' || options.loginHint.length > 254 || !email.test(options.loginHint))
@@ -195,16 +223,14 @@ export function applyMarketplaceSetup(options = {}) {
   return outcome(metadata, 'configured', true);
 }
 
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (typeof process !== 'undefined' && process.argv[1] && fs.existsSync(process.argv[1]) && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const command = process.argv[2];
     let result;
     if (command === 'inspect') result = inspectMarketplaceSetup();
     else if (command === 'download') result = await downloadMarketplaceSetup();
     else if (command === 'apply') {
-      const input = JSON.parse(fs.readFileSync(0, 'utf8'));
-      if (!same(Object.keys(input).sort(), ['local_configuration_authorized', 'setup_file', 'login_hint'].sort()))
-        fail('MARKETPLACE_SETUP_INVALID', 'Use the supported bounded local setup request.');
+      const input = parseMarketplaceSetupInput(fs.readFileSync(0, 'utf8'));
       result = applyMarketplaceSetup({setupFile: input.setup_file, localConfigurationAuthorized: input.local_configuration_authorized, loginHint: input.login_hint});
     } else fail('MARKETPLACE_SETUP_INVALID', 'Choose inspect, download or apply. No customer source read is performed.');
     process.stdout.write(encode(result));

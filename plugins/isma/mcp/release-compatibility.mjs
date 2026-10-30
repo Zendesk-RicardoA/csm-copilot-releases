@@ -3,9 +3,11 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import {createRequire} from 'node:module';
 import { BetaError } from './core.mjs';
-import Native from './approved-native-contract.js';
 import { WORKFLOW_CATALOG } from './workflow-catalog.mjs';
+
+const Native = createRequire(import.meta.url)('./approved-native-contract.js');
 
 const same = (left,right) => Native.canonicalSourceJson(left) === Native.canonicalSourceJson(right);
 
@@ -113,7 +115,7 @@ export function verifyInstallableBundle(bundleRoot, descriptorPath) {
   return { state: 'matched', package_version: manifest.version, installation_permitted: true };
 }
 
-if (process.argv[1] && fs.existsSync(process.argv[1]) && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (typeof process !== 'undefined' && process.argv[1] && fs.existsSync(process.argv[1]) && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try { verifyInstallableBundle(process.argv[2], process.argv[3]); }
   catch (error) { process.stderr.write(error.message + '\n'); process.exitCode = 1; }
 }

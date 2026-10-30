@@ -4,6 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import {spawnSync} from 'node:child_process';
+import {Buffer} from 'node:buffer';
 import {BetaError} from './core.mjs';
 
 const MAXIMUM = 2 * 1024 * 1024;
@@ -23,6 +24,7 @@ function executable(name) {
 
 // Never return command output in errors: credential helpers can include secrets.
 export function runSetupCommand(name, args, input, run = spawnSync) {
+  if (typeof process === 'undefined') fail('MARKETPLACE_SETUP_STANDALONE_REQUIRED', 'Run release acquisition with the existing desktop Node executable as a standalone child process.');
   for (const candidate of executable(name)) {
     let result;
     try { result = run(candidate, args, {encoding: 'utf8', input, timeout: TIMEOUT, maxBuffer: MAXIMUM,
@@ -37,7 +39,7 @@ export function runSetupCommand(name, args, input, run = spawnSync) {
 export function registeredGitHubRepository(metadata, listing) {
   const matches = listing?.marketplaces?.filter(item => item.name === metadata.name) || [];
   if (matches.length !== 1 || matches[0].marketplaceSource?.sourceType !== 'git')
-    fail('MARKETPLACE_SETUP_SOURCE_REQUIRED', 'Register this plugin through its private GitHub marketplace, then resume setup.');
+    fail('MARKETPLACE_SETUP_SOURCE_REQUIRED', 'This installation is not registered through its GitHub marketplace. Preserve private settings, use the supplied private repository’s exact clone URL to replace only this marketplace registration with the supported Git source, update the same plugin, then resume setup. Do not guess a repository URL or fall back to a pasted setup file.');
   const source = matches[0].marketplaceSource.source;
   if (typeof source !== 'string') fail('MARKETPLACE_SETUP_SOURCE_REQUIRED', 'The registered marketplace has no supported GitHub source.');
   // Accept only ordinary HTTPS or Git SSH repository coordinates; no URL credentials or commands.

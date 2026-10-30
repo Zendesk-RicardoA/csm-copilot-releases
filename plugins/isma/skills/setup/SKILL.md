@@ -10,10 +10,26 @@ person, verify a Slides builder or complete any customer workflow.
 
 ## Check before changing anything
 
+For a fresh install or upgrade, inspect the supported Codex marketplace listing
+and the installed package version first. The normal distribution is the private
+GitHub marketplace. Use the exact repository clone URL supplied by the owner or
+verified from Git metadata; never invent it. If only a downloaded/local folder
+is registered, explain that Git upgrades will not follow that folder. With the
+existing installation authorization, replace only this plugin's marketplace
+registration with the supplied Git source and install the same plugin. Preserve
+all private state. If the source URL is unavailable, ask for that one missing
+repository link; do not silently choose local installation or request a setup
+attachment. A local/offline installation remains available when explicitly
+chosen. A newer version's setup file must never be applied to an older plugin.
+
 Resolve the plugin root from this installed skill's directory (`../..`). Use the
 desktop's existing Node runtime to run the packaged helper
 `mcp/marketplace-setup.mjs inspect`. Do not fetch or install another runtime.
 The helper returns only setup status; never print the private files.
+Prefer a standalone child process for all helper commands. The host JavaScript
+REPL can orchestrate that process; do not import and execute the helper in the
+REPL's module context. Resolve the existing desktop Node executable once and
+reuse it. Do not install a runtime to work around an invocation error.
 
 - If `configured`, continue the normal native setup wizard. Do not import again.
 - If `private_setup_required`, run the same bundled helper with `download`.
@@ -38,8 +54,9 @@ The helper returns only setup status; never print the private files.
 ## Apply only the selected release setup
 
 Use the user's existing setup authorization; ask once only if saving bounded
-local release setup has not already been authorized. Ask
-for the user's own company sign-in name if it was not already supplied. This is
+local release setup has not already been authorized. Collect any missing
+authorization and own company sign-in name in one question. Retain the supplied
+values when resuming; do not ask again after a command-input error. This is
 only an SSO login hint; identity and permissions come from actual authentication.
 Never ask for a password, token or sign-in code.
 
@@ -55,6 +72,16 @@ not command-line arguments, shell interpolation, a repository file or a log:
 }
 ```
 
+When the shell tool cannot pipe structured input safely, use the host JavaScript
+tool to launch a child with `spawn` from `node:child_process`, arguments
+`[helperPath, 'apply']` and `stdio:['pipe','pipe','pipe']`. Here `helperPath` is the
+installed helper's absolute path and the executable is the resolved desktop
+Node binary. Write `JSON.stringify(request)` with `child.stdin.end(...)` before
+awaiting the child's completion. Capture its bounded status and exit code.
+Never run a bare `apply` command and wait for input from the user. If the helper
+returns `MARKETPLACE_SETUP_INPUT_REQUIRED`, repair the invocation once using
+the authorization and login hint already provided; do not repeat empty calls.
+
 Replace the example with only the verified download path and the user's supplied login
 hint. The helper verifies the exact plugin, frozen release proof, controls and
 renderer contracts before saving anything. It preserves credentials, personal
@@ -63,6 +90,12 @@ builders or create drafts. Do not run customer workflows during this step.
 
 If `restart_required`, tell the user to restart the desktop app and open a fresh
 chat. Do not claim the current process has reloaded the configuration.
+When newly installed tools are not exposed in the current chat, complete these
+available local release-setup steps first. Then request the one required restart
+and fresh chat, with the installed version and remaining company sign-in and
+dependency checks stated plainly. Do not stop at "installed" or repeatedly
+request fresh chats before finishing the local helper steps. Never claim manager
+research, source verification or full onboarding from release setup alone.
 
 ## Continue the existing setup controls
 

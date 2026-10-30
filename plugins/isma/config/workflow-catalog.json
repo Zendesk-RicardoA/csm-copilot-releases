@@ -435,6 +435,8 @@
     }
   },
   "shared_dependencies": [
+    "plugins/csm-copilot-beta/mcp/marketplace-setup.mjs",
+    "plugins/csm-copilot-beta/mcp/marketplace-setup-download.mjs",
     "plugins/csm-copilot-beta/mcp/setup-dependencies.mjs",
     "plugins/csm-copilot-beta/config/setup-dependencies.json",
     "plugins/csm-copilot-beta/mcp/gmail-native-signature.mjs",

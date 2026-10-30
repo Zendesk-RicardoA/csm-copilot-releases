@@ -16,15 +16,29 @@ desktop's existing Node runtime to run the packaged helper
 The helper returns only setup status; never print the private files.
 
 - If `configured`, continue the normal native setup wizard. Do not import again.
-- If `private_setup_required`, ask for the matching private setup file supplied
-  by the release owner. It is separate from the Git marketplace and contains
-  release controls, not credentials. Do not create, edit or guess it.
+- If `private_setup_required`, run the same bundled helper with `download`.
+  It discovers this plugin's registered private GitHub marketplace, reuses the
+  user's existing GitHub access, and downloads the exact installed version's
+  published setup asset. It checks GitHub's size and SHA-256 digest and the
+  existing frozen release proof, complete plugin inventory and private controls.
+  A valid owner-only local cache is reused when setup resumes. Do not ask the
+  user to attach or send a setup file, install another download tool, or paste
+  a token. Do not create, edit or guess release controls.
+- For `downloaded` or `cached`, use only the returned verified `setup_file` path
+  in the apply step below. For `configured`, continue the native setup wizard.
+- For a GitHub sign-in error, give the one returned GitHub sign-in step and
+  resume after the user completes it. Access, SSO, unavailable-release and
+  connectivity errors have different next actions; follow the returned code.
+  Do not loop through reinstallations or repeated sign-in attempts. If the
+  user explicitly chooses offline setup, the existing matching-file apply path
+  remains available; it is not the normal installation route.
 - If blocked, show the returned code and next action. Do not modify a manifest,
   retry a sign-in to repair release configuration, or bypass company restrictions.
 
 ## Apply only the selected release setup
 
-Ask once for permission to save the displayed bounded local release setup and
+Use the user's existing setup authorization; ask once only if saving bounded
+local release setup has not already been authorized. Ask
 for the user's own company sign-in name if it was not already supplied. This is
 only an SSO login hint; identity and permissions come from actual authentication.
 Never ask for a password, token or sign-in code.
@@ -41,7 +55,7 @@ not command-line arguments, shell interpolation, a repository file or a log:
 }
 ```
 
-Replace the example with only the selected path and the user's supplied login
+Replace the example with only the verified download path and the user's supplied login
 hint. The helper verifies the exact plugin, frozen release proof, controls and
 renderer contracts before saving anything. It preserves credentials, personal
 settings and cases; it does not install software, sign in, query sources, update

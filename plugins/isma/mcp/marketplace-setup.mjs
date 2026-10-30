@@ -1,4 +1,4 @@
-// Offline first-run setup for the Git marketplace. No connector or installer runs.
+// First-run release setup. Acquisition reads only the registered private GitHub release.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {BetaError, validatePackagePreflight} from './core.mjs';
 import Native from './approved-native-contract.js';
 import {assertInstallableReleaseDescriptor} from './release-compatibility.mjs';
+import {downloadMatchingSetup} from './marketplace-setup-download.mjs';
 
 export const MARKETPLACE_CONTROL_FILES = Object.freeze([
   'approved-version-manifest.json', 'limited-beta-runtime.json', 'feedback-form.json', 'snowflake-setup-template.json',
@@ -115,7 +116,14 @@ const outcome = (metadata, state, changed = false) => ({state, package_version: 
   restart_required: changed, next_action: state === 'configured'
     ? changed ? 'Restart the desktop app and run the setup wizard in a fresh chat. Then verify your own company sign-in; release setup is not connection readiness.'
       : 'Continue the setup wizard and verify your own company sign-in. This check does not establish source or workflow readiness.'
-    : 'Select the matching private setup file supplied by the release owner. Do not run customer workflows or edit approval files.'});
+    : 'Run the bundled setup download command to acquire the matching private GitHub release setup. Do not run customer workflows or edit approval files.'});
+
+export async function downloadMarketplaceSetup(options = {}) {
+  const resolved = locations(options);
+  return downloadMatchingSetup({...options, ...resolved,
+    inspectSetup: () => inspectMarketplaceSetup(resolved),
+    verifySetup: setupFile => verifyMarketplaceSetup({...resolved, setupFile})});
+}
 
 export function inspectMarketplaceSetup(options = {}) {
   const {metadata, packageRoot, stateDirectory} = locations(options);
@@ -192,16 +200,17 @@ if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import
     const command = process.argv[2];
     let result;
     if (command === 'inspect') result = inspectMarketplaceSetup();
+    else if (command === 'download') result = await downloadMarketplaceSetup();
     else if (command === 'apply') {
       const input = JSON.parse(fs.readFileSync(0, 'utf8'));
       if (!same(Object.keys(input).sort(), ['local_configuration_authorized', 'setup_file', 'login_hint'].sort()))
         fail('MARKETPLACE_SETUP_INVALID', 'Use the supported bounded local setup request.');
       result = applyMarketplaceSetup({setupFile: input.setup_file, localConfigurationAuthorized: input.local_configuration_authorized, loginHint: input.login_hint});
-    } else fail('MARKETPLACE_SETUP_INVALID', 'Choose inspect or apply. No installation or source read is performed.');
+    } else fail('MARKETPLACE_SETUP_INVALID', 'Choose inspect, download or apply. No customer source read is performed.');
     process.stdout.write(encode(result));
   } catch (error) {
     process.stdout.write(encode({state: 'blocked', code: error instanceof BetaError ? error.code : 'MARKETPLACE_SETUP_FAILED', configuration_changed: false,
-      customer_data_read: false, drafts_created: false, next_action: 'Stop and report the setup code. No credentials, case records or source permissions were changed.'}));
+      customer_data_read: false, drafts_created: false, next_action: error instanceof BetaError ? error.message : 'Stop and report the setup code. No credentials, case records or source permissions were changed.'}));
     process.exitCode = 1;
   }
 }

@@ -1,6 +1,6 @@
 # ISMA release checks
 
-Package: **0.3.2-isma.live.codex.20261030170325**.
+Package: **0.3.3-isma.live.codex.20261031012538**.
 
 - [x] Complete all twenty source/package technical stages and five invented workflow simulations.
 - [x] Verify cold automatic acquisition and strict existing setup import with invented data.

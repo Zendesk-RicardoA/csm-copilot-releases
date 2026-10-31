@@ -1,9 +1,9 @@
 {
   "name": "isma",
-  "version": "0.3.2-isma.live.codex.20261030170325",
+  "version": "0.3.3-isma.live.codex.20261031012538",
   "description": "ISMA coordinates read-only customer preparation and separately approved private drafts for CSMs and managers.",
   "author": {
-    "name": "CSM Copilot beta maintainers"
+    "name": "Ricardo Ayala"
   },
   "skills": "./skills/",
   "extensions": {
@@ -15,7 +15,7 @@
     "displayName": "ISMA",
     "shortDescription": "Prepare accounts and follow up",
     "longDescription": "One assistant for assigned-book CSM work and bounded manager account lookup under actual source permissions, with guided installation, visible source limits and human review before private drafts.",
-    "developerName": "CSM Copilot beta maintainers",
+    "developerName": "Ricardo Ayala",
     "category": "Productivity",
     "capabilities": [
       "Read",

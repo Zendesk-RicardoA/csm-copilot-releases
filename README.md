@@ -1,6 +1,6 @@
 # ISMA private marketplace
 
-Current package: **0.3.2-isma.live.codex.20261030170325**. One plugin serves CSMs and managers.
+Current package: **0.3.3-isma.live.codex.20261031012538**. One plugin serves CSMs and managers.
 
 Give each colleague access to this private repository. For a first installation, copy this repository’s exact HTTPS clone URL from GitHub and run `codex plugin marketplace add <REPOSITORY_GIT_URL> --ref main`, then `codex plugin add isma@isma`. Replace the placeholder with that URL. Do not silently register a downloaded local folder; existing local registrations need their source replaced while preserving private settings. They can then install ISMA from this Git marketplace and start **ISMA setup**. Setup automatically downloads and verifies this installed version's matching private release asset. No setup attachment needs to be sent or pasted into chat. Each person uses their own GitHub access and company sign-in; installation grants no data permissions.
 
@@ -15,3 +15,5 @@ CSM book and owned-CTA scope remain authoritative. Manager mode supports bounded
 One ISMA identity replaces Candidate/Test on the owner laptop. Preserve settings when upgrading other existing laptops and retire only the exact older registrations after replacement verification. Historical versions remain recoverable.
 
 All technical checks passed for this exact package. The actual private GitHub setup download and local startup are verified separately in the installation receipt. Independent colleague installation, fresh actual-model, live customer/Gmail and human rendered-output acceptance remain pending; this is a controlled private update, not a wider approved release.
+
+This update corrects the public developer and author attribution in package metadata. The renderer and workflow behavior are unchanged.

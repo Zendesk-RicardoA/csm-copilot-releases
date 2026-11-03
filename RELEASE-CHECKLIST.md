@@ -1,13 +1,10 @@
-# Public download release checks
+# ISMA Snowflake setup repair checks
 
-Package: **0.3.4-isma.live.codex.20261103113542**.
+Package: **0.3.5-isma.live.codex.20261103174914**.
 
-- [x] Complete every source/package technical stage and all five invented workflow simulations.
-- [x] Verify anonymous public setup acquisition, private authentication fallback and strict release/inventory checks with invented data.
-- [x] Independently verify all previous assertions in the approved fixture-only update are unchanged.
-- [x] Keep personal credentials, profiles, customer state and case approvals outside the release payload.
-- [ ] Audit the final working tree, complete release history and versioned setup assets before changing visibility.
-- [ ] Verify the uploaded exact-version setup before moving the installation branch.
-- [ ] Verify real anonymous repository access and setup download after publication.
-- [ ] Verify the local Git update, preserved private settings and fresh native startup.
-- [ ] Complete independent colleague installation and live/human output acceptance before claiming stable release acceptance.
+- [x] Freeze and test the runtime-only source and packaged plugin with invented data.
+- [x] Preserve existing beta controls and exclude personal credentials and customer state.
+- [x] Build and verify the exact-version marketplace setup asset.
+- [ ] Publish and verify the exact-version setup asset before updating the installation branch.
+- [ ] Verify the public Git update and setup download.
+- [ ] Complete independent colleague installation, live customer workflows and human rendered-output acceptance before claiming stable release acceptance.

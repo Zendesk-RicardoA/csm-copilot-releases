@@ -34,7 +34,7 @@ Ask Codex to update ISMA from this repository while preserving your settings. Fo
 
 ## Release information
 
-Current package: **0.3.4-isma.live.codex.20261103113542**. The exact versioned setup is published before the installation branch is updated. Setup verifies the release digest, complete installed-file inventory and frozen release proof before importing settings. Shared release policy and non-credential connection settings are public; each person's credentials, profiles, cases and approvals stay local. Company authentication and source permissions determine data access.
+Current package: **0.3.5-isma.live.codex.20261103174914**. The exact versioned setup is published before the installation branch is updated. Setup verifies the release digest, complete installed-file inventory and frozen release proof before importing settings. Shared release policy and non-credential connection settings are public; each person's credentials, profiles, cases and approvals stay local. Company authentication and source permissions determine data access.
 
 The dependency checklist covers Snowflake, Gmail, Google Calendar, Google Drive, Converge, Zendesk Help Center, optional Slack and Cerebro, and private deck components. Supported additional installations need the user's approval and are verified before setup continues. Open an approved email draft in Gmail and use Insert signature to add your saved signature.
 

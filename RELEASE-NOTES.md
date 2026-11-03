@@ -1,10 +1,8 @@
-# Public ISMA downloads
+# ISMA Snowflake setup repair
 
-Package: **0.3.4-isma.live.codex.20261103113542**.
-Frozen package SHA-256: 438a97c6725879e6da4190b950ff582187b809202fbef70c7e083838a1624edf.
+Package: **0.3.5-isma.live.codex.20261103174914**.
+Frozen package SHA-256: 52b0ffe790c2e69130db5f25010714e86b5ed912f0bb87f40d0cf4f84489ff29.
 
-The existing GitHub release source now supports public downloads without a GitHub account or invitation. Setup tries anonymous access first and only consults existing credentials when a private repository requires them. Missing public releases and rate limits do not trigger a sign-in loop. Exact-version selection, complete inventory checks and SHA-256 verification remain enforced.
+This candidate update repairs Snowflake setup when Homebrew installs Snowflake CLI through a Bash launcher. ISMA now resolves the formula's Python runtime, rejects a shell launcher as a Python interpreter, and reports an explicit unsupported-runtime error when it cannot find a valid runtime. If the CLI is installed but local configuration fails, setup reports the configuration block and preserves existing settings instead of attempting another CLI install.
 
-The owner approved a fixture-only correction for expired simulated test approvals. Every previous assertion was independently verified unchanged. The bundled and installed access policies were not extended by that repair. All 20 technical stages passed, including 1158 source tests, 722 packaged tests and five invented workflow simulations.
-
-Each user still signs in to company tools with their own account. Existing private settings, source permissions, the no-expiry policy and private draft reviews are preserved. This update does not claim independent colleague, live customer or human rendered-output acceptance.
+Homebrew detection and installation guidance is deferred to a later update. Existing company sign-in, source permissions and private draft reviews remain in force. The frozen candidate passed all technical gates and invented workflow simulations. Independent colleague installation, live customer workflows and human rendered-output acceptance have not been completed for this version.

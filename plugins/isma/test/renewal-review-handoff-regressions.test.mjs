@@ -12,6 +12,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const writeJson = (file, value) => fs.writeFileSync(file, JSON.stringify(value), { mode: 0o600 });
 function start(temp) {
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "config/approved-version-manifest.json")));
+  // This isolated fixture needs to outlive its simulated 15-minute review clock.
+  // It never changes the bundled or installed expiration policy.
+  manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
   manifest.status = "approved_for_limited_beta";
   manifest.constraints = { real_customer_data: true, external_reads: true, private_draft_writes: true,
     production_system_writes: false, generated_artifacts: true };

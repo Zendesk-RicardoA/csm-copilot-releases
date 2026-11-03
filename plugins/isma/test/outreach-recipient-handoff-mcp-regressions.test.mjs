@@ -15,6 +15,8 @@ function start(t, existing = null) {
   const dir = existing || fs.mkdtempSync(path.join(os.tmpdir(), "csm-recipient-handoff-invented-"));
   if (!existing) {
     const manifest = JSON.parse(fs.readFileSync(path.join(root, "config/approved-version-manifest.json")));
+    // Only this disposable invented-data fixture gets a fresh test lifetime.
+    manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
     manifest.status = "approved_for_limited_beta";
     manifest.constraints = { real_customer_data: true, external_reads: true, private_draft_writes: true, production_system_writes: false, generated_artifacts: true };
     fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest), { mode: 0o600 });

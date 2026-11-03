@@ -16,6 +16,8 @@ if (!process.argv[2] || !fs.statSync(runtimeDir).isDirectory() || fs.lstatSync(r
 }
 const namespace = 'csm-invented-model-' + createHash('sha256').update(runtimeDir).digest('hex').slice(0, 16);
 const manifest = JSON.parse(fs.readFileSync(path.join(plugin, 'config/approved-version-manifest.json'), 'utf8'));
+// A disposable invented-data fixture, not a renewal of any installed approval.
+manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
 manifest.status = 'approved_for_limited_beta';
 // Match the existing approved boundary shape; the proxy below still rejects every artifact/write tool.
 manifest.constraints = { real_customer_data: true, external_reads: true, private_draft_writes: true, production_system_writes: false, generated_artifacts: true };

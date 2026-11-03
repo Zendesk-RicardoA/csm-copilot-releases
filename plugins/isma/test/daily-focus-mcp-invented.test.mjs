@@ -16,6 +16,8 @@ function writeJson(file, value) { fs.writeFileSync(file, `${JSON.stringify(value
 function makeRuntime(tempDir, { approved = true } = {}) {
   const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, "config", "approved-version-manifest.json"), "utf8"));
   // Simulated approval belongs only to this test process. All data is invented.
+  // The bundled and installed expiration policies remain unchanged.
+  manifest.expires_at = new Date(Date.now() + 60_000).toISOString();
   if (approved) {
     manifest.status = "approved_for_limited_beta";
     manifest.constraints = { real_customer_data: true, external_reads: true, private_draft_writes: true, production_system_writes: false, generated_artifacts: true };

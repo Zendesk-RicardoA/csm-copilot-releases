@@ -36,7 +36,7 @@ test("the declared packaged launcher starts MCP and exposes all five workflows",
   } finally { fs.rmSync(tempDir, { recursive: true, force: true }); }
 });
 
-test("the unchanged installed package passes its own version, boundary, and integrity preflight", () => {
+test("the unchanged package verifies its frozen bytes and still refuses an expired approval", () => {
   const plugin = JSON.parse(fs.readFileSync(path.join(packageRoot, ".codex-plugin", "plugin.json"), "utf8"));
   const manifest = JSON.parse(fs.readFileSync(path.join(packageRoot, "config", "approved-version-manifest.json"), "utf8"));
   const result = validatePackagePreflight({
@@ -44,9 +44,16 @@ test("the unchanged installed package passes its own version, boundary, and inte
     packageRoot,
     expectedPackageName: plugin.name,
     expectedPackageVersion: plugin.version,
+    // Verify the immutable artifact within its declared lifetime. This does not
+    // renew it: an expired package must still be refused at the actual time.
+    now: manifest.expires_at ? new Date(Date.parse(manifest.expires_at) - 1000) : new Date(),
   });
   assert.equal(result.package_version, plugin.version);
   assert.equal(result.boundaries.external_reads, manifest.status === "approved_for_limited_beta");
+  if (manifest.expires_at && Date.parse(manifest.expires_at) <= Date.now()) {
+    assert.throws(() => validatePackagePreflight({manifest, packageRoot,
+      expectedPackageName: plugin.name, expectedPackageVersion: plugin.version}), {code: "VERSION_STALE"});
+  }
 });
 
 test("an invented-only installed package reports approval required and refuses Daily Focus reads", () => {
@@ -54,6 +61,11 @@ test("an invented-only installed package reports approval required and refuses D
   if (manifest.status !== "approved_for_invented_testing") return;
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "csm-installed-preflight-"));
   try {
+    // Only this disposable invented-only fixture gets a one-minute lifetime.
+    // The installed/bundled manifest is never changed by the test.
+    const fixturePath = path.join(tempDir, "invented-manifest.json");
+    fs.writeFileSync(fixturePath, JSON.stringify({...manifest,
+      expires_at: new Date(Date.now() + 60_000).toISOString()}), {mode: 0o600});
     const requests = [
       { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {} } },
       { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "beta_setup_status", arguments: { workflow: "daily_focus" } } },
@@ -66,6 +78,8 @@ test("an invented-only installed package reports approval required and refuses D
         PLUGIN_DATA: path.join(tempDir, "state"),
         CSM_COPILOT_BETA_STATE_NAMESPACE: `csm-preflight-${randomBytes(5).toString("hex")}`,
         CSM_COPILOT_BETA_DISABLE_OWNER_ASSISTED: "true",
+        CSM_COPILOT_BETA_MANIFEST_PATH: fixturePath,
+        CSM_COPILOT_SNOWFLAKE_PYTHON: "/not-a-real-snowflake-python",
       },
       input: `${requests.map((request) => JSON.stringify(request)).join("\n")}\n`,
       encoding: "utf8",

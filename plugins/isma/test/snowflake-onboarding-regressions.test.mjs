@@ -116,6 +116,11 @@ test('existing system-specific macOS configuration is reused, not replaced by an
 test('native setup controls are registered and cannot authenticate or mutate in invented mode', t => {
   const options = fixture(t);
   const root = fileURLToPath(new URL('..', import.meta.url));
+  const fixtureManifest = path.join(options.home, 'invented-manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'config/approved-version-manifest.json')));
+  // Only the temporary, source-disabled invented fixture has this test lifetime.
+  manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
+  fs.writeFileSync(fixtureManifest, JSON.stringify(manifest), {mode: 0o600});
   const requests = [
     ['tools/list', {}],
     ['tools/call', {name: 'beta_prepare_snowflake_setup', arguments: {}}],
@@ -126,7 +131,7 @@ test('native setup controls are registered and cannot authenticate or mutate in 
   const result = spawnSync(process.execPath, [path.join(root, 'mcp/server.mjs')], {cwd: root, encoding: 'utf8', timeout: 10000,
     input: requests.map(value => JSON.stringify(value)).join('\n') + '\n',
     env: {...process.env, PLUGIN_DATA: path.join(options.home, 'state'), CSM_COPILOT_BETA_STATE_NAMESPACE: 'csm-snowflake-invented',
-      CSM_COPILOT_BETA_MANIFEST_PATH: path.join(root, 'config/approved-version-manifest.json'),
+      CSM_COPILOT_BETA_MANIFEST_PATH: fixtureManifest,
       CSM_COPILOT_BETA_LIMITED_RUNTIME_PATH: path.join(root, 'config/limited-beta-runtime.json')}});
   assert.equal(result.status, 0, 'Invented MCP transport must complete');
   const responses = new Map(result.stdout.trim().split('\n').map(line => {const value = JSON.parse(line); return [value.id, value];}));

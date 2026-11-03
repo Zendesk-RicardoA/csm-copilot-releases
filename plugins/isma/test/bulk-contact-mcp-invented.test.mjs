@@ -12,6 +12,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 function start(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "csm-bulk-invented-"));
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "config/approved-version-manifest.json"), "utf8"));
+  // Only this disposable invented-data fixture gets a fresh test lifetime.
+  manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
   manifest.status = "approved_for_limited_beta";
   manifest.constraints = { real_customer_data: true, external_reads: true, private_draft_writes: true,
     production_system_writes: false, generated_artifacts: true };

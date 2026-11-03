@@ -1,4 +1,5 @@
-// Private release acquisition only. No setup import, account read or shared identity.
+// Exact-release acquisition. Public repositories need no GitHub account.
+// Private repositories reuse existing authentication without exposing it.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -39,14 +40,14 @@ export function runSetupCommand(name, args, input, run = spawnSync) {
 export function registeredGitHubRepository(metadata, listing) {
   const matches = listing?.marketplaces?.filter(item => item.name === metadata.name) || [];
   if (matches.length !== 1 || matches[0].marketplaceSource?.sourceType !== 'git')
-    fail('MARKETPLACE_SETUP_SOURCE_REQUIRED', 'This installation is not registered through its GitHub marketplace. Preserve private settings, use the supplied private repository’s exact clone URL to replace only this marketplace registration with the supported Git source, update the same plugin, then resume setup. Do not guess a repository URL or fall back to a pasted setup file.');
+    fail('MARKETPLACE_SETUP_SOURCE_REQUIRED', 'This installation is not registered through its GitHub marketplace. Preserve private settings, use the supplied repository’s exact HTTPS clone URL to replace only this marketplace registration with the supported Git source, update the same plugin, then resume setup. Do not guess a repository URL or fall back to a pasted setup file.');
   const source = matches[0].marketplaceSource.source;
   if (typeof source !== 'string') fail('MARKETPLACE_SETUP_SOURCE_REQUIRED', 'The registered marketplace has no supported GitHub source.');
   // Accept only ordinary HTTPS or Git SSH repository coordinates; no URL credentials or commands.
   const match = /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([A-Za-z0-9][A-Za-z0-9-]{0,38})\/([A-Za-z0-9_][A-Za-z0-9_.-]{0,99}?)\/?$/.exec(source);
   const repository = match?.[2]?.replace(/\.git$/, '');
   if (!match || !repository || repository === '.' || repository === '..')
-    fail('MARKETPLACE_SETUP_SOURCE_REQUIRED', 'Use the registered private GitHub repository without credentials, query strings or extra paths.');
+    fail('MARKETPLACE_SETUP_SOURCE_REQUIRED', 'Use the registered GitHub repository without credentials, query strings or extra paths.');
   return {owner: match[1], repository};
 }
 
@@ -74,7 +75,7 @@ async function boundedBody(response) {
   return Buffer.concat(chunks);
 }
 
-export function githubSetupClient(token, fetcher = fetch, {timeoutMs = TIMEOUT} = {}) {
+export function githubSetupClient(token = null, fetcher = fetch, {timeoutMs = TIMEOUT} = {}) {
   async function request(route, binary = false) {
     let url = new URL('https://api.github.com' + route);
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -82,7 +83,7 @@ export function githubSetupClient(token, fetcher = fetch, {timeoutMs = TIMEOUT} 
     try {
       for (let redirects = 0; redirects <= 3; redirects++) {
         const headers = {Accept: binary ? 'application/octet-stream' : 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'};
-        if (url.origin === 'https://api.github.com') headers.Authorization = 'Bearer ' + token;
+        if (token && url.origin === 'https://api.github.com') headers.Authorization = 'Bearer ' + token;
         const response = await fetcher(url.href, {method: 'GET', redirect: 'manual', signal: controller.signal, headers});
         if ([301, 302, 303, 307, 308].includes(response.status)) {
           const location = response.headers.get('location');
@@ -94,7 +95,7 @@ export function githubSetupClient(token, fetcher = fetch, {timeoutMs = TIMEOUT} 
         }
         if (response.status === 401) fail('MARKETPLACE_SETUP_GITHUB_SIGN_IN_REQUIRED', 'GitHub sign-in has expired. Sign in with the account that can read this marketplace, then resume setup.');
         if (response.status === 403 || response.status === 429) fail('MARKETPLACE_SETUP_GITHUB_ACCESS_BLOCKED', 'GitHub denied this read or temporarily rate-limited it. Check repository and company SSO access or the GitHub rate limit; do not reinstall.');
-        if (response.status === 404) fail('MARKETPLACE_SETUP_RELEASE_UNAVAILABLE', 'The matching private release is unavailable to this GitHub account. Check repository access and ask the release owner to verify this exact version.');
+        if (response.status === 404) fail('MARKETPLACE_SETUP_RELEASE_UNAVAILABLE', 'The repository or matching release is unavailable. Check the registered repository URL and ask the release owner to verify this exact version. Private repositories also require repository access.');
         if (response.status !== 200) fail('MARKETPLACE_SETUP_DOWNLOAD_FAILED', 'GitHub could not complete this release read. Resume after the service is available.');
         const bytes = await boundedBody(response);
         if (binary) return bytes;
@@ -158,11 +159,21 @@ export async function downloadMatchingSetup(options) {
           && receipt.sha256 === hash(fs.readFileSync(setupFile))) { verifySetup(setupFile); return output('cached'); }
     } catch { /* Reacquire a damaged cache, without importing it. */ }
   }
-  const client = options.client || githubSetupClient(existingGitHubToken(repository, command));
   const base = `/repos/${repository.owner}/${repository.repository}`;
-  const repo = await client.json(base);
-  if (repo.private !== true || repo.full_name?.toLowerCase() !== `${repository.owner}/${repository.repository}`.toLowerCase())
-    fail('MARKETPLACE_SETUP_REPOSITORY_INVALID', 'Setup controls must come from the exact registered private GitHub repository.');
+  let client = options.client || githubSetupClient(null, options.fetcher);
+  let repo;
+  try { repo = await client.json(base); }
+  catch (error) {
+    // Discover visibility before touching a credential helper. A public install
+    // never needs gh, a GitHub profile, or a stored/possibly expired token.
+    // Only repository discovery can fall back to private authentication; a
+    // missing public release or a rate limit must not become a sign-in loop.
+    if (options.client || !['MARKETPLACE_SETUP_RELEASE_UNAVAILABLE', 'MARKETPLACE_SETUP_GITHUB_SIGN_IN_REQUIRED'].includes(error.code)) throw error;
+    client = githubSetupClient(existingGitHubToken(repository, command), options.fetcher);
+    repo = await client.json(base);
+  }
+  if (typeof repo.private !== 'boolean' || repo.full_name?.toLowerCase() !== `${repository.owner}/${repository.repository}`.toLowerCase())
+    fail('MARKETPLACE_SETUP_REPOSITORY_INVALID', 'Setup controls must come from the exact registered GitHub repository.');
   const release = await client.json(base + '/releases/tags/' + encodeURIComponent(tag));
   const assets = release.assets?.filter(asset => asset.name === ASSET) || [];
   if (release.draft !== false || release.tag_name !== tag || assets.length !== 1 || assets[0].state !== 'uploaded'

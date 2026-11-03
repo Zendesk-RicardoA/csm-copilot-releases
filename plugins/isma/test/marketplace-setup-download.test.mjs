@@ -35,6 +35,63 @@ test('first install downloads the exact release and applies through the unchange
   assert.equal(inspectMarketplaceSetup(f.options).state, 'configured');
 }));
 
+test('public setup works anonymously without gh, a credential helper, or a GitHub account', () => fixture(async f => {
+  const r = remote(f); r.repo.private = false;
+  const calls = [];
+  const fetcher = async (url, options) => {
+    calls.push({url, headers: options.headers});
+    if (url.endsWith('/invented-release')) return Response.json(r.repo);
+    if (url.includes('/releases/tags/')) return Response.json(r.release);
+    return new Response(r.bytes);
+  };
+  const downloaded = await downloadMarketplaceSetup({...r.options, client: undefined, fetcher,
+    command: () => { throw new Error('A public download must not inspect GitHub credentials.'); }});
+  assert.equal(downloaded.state, 'downloaded');
+  assert.equal(downloaded.verified, true);
+  assert.equal(calls.length, 3);
+  assert.ok(calls.every(call => call.headers.Authorization === undefined));
+  assert.equal(fs.readFileSync(downloaded.setup_file, 'utf8'), r.bytes.toString());
+  assert.equal(fs.statSync(downloaded.setup_file).mode & 0o777, 0o600);
+  assert.equal(applyMarketplaceSetup({...f.options, setupFile: downloaded.setup_file,
+    localConfigurationAuthorized: true, loginHint: 'operator@example.invalid'}).state, 'configured');
+}));
+
+test('private discovery reuses existing authentication after the anonymous repository read only', () => fixture(async f => {
+  const r = remote(f), calls = [], commands = [];
+  const fetcher = async (url, options) => {
+    calls.push({url, headers: options.headers});
+    if (calls.length === 1) return new Response(null, {status: 404});
+    if (url.endsWith('/invented-release')) return Response.json(r.repo);
+    if (url.includes('/releases/tags/')) return Response.json(r.release);
+    return new Response(r.bytes);
+  };
+  const downloaded = await downloadMarketplaceSetup({...r.options, client: undefined, fetcher,
+    command: (name, args) => {commands.push({name, args}); return 'invented-private-token';}});
+  assert.equal(downloaded.state, 'downloaded');
+  assert.equal(commands.length, 1); assert.equal(commands[0].name, 'gh');
+  assert.equal(calls[0].headers.Authorization, undefined);
+  assert.ok(calls.slice(1).every(call => call.headers.Authorization === 'Bearer invented-private-token'));
+}));
+
+test('missing public releases and anonymous rate limits never request GitHub sign-in', () => fixture(async f => {
+  for (const [status, code] of [[404, 'MARKETPLACE_SETUP_RELEASE_UNAVAILABLE'], [403, 'MARKETPLACE_SETUP_GITHUB_ACCESS_BLOCKED'],
+    [429, 'MARKETPLACE_SETUP_GITHUB_ACCESS_BLOCKED']]) {
+    const r = remote(f); r.repo.private = false;
+    let requests = 0;
+    await assert.rejects(downloadMarketplaceSetup({...r.options, client: undefined,
+      command: () => { throw new Error('Do not request credentials for this public source.'); },
+      fetcher: async url => {
+        requests++;
+        return url.endsWith('/invented-release') ? Response.json(r.repo) : new Response(null, {status});
+      }}), {code});
+    assert.equal(requests, 2); assert.equal(fs.existsSync(f.state), false);
+  }
+  const r = remote(f);
+  await assert.rejects(downloadMarketplaceSetup({...r.options, client: undefined,
+    command: () => {throw new Error('A rate limit must not start authentication.');},
+    fetcher: async () => new Response(null, {status: 403})}), {code: 'MARKETPLACE_SETUP_GITHUB_ACCESS_BLOCKED'});
+}));
+
 test('resume reuses verified private cache, and configured installations need no GitHub access', () => fixture(async f => {
   const r = remote(f), first = await downloadMarketplaceSetup(r.options); r.calls.length = 0;
   assert.equal((await downloadMarketplaceSetup(r.options)).state, 'cached'); assert.deepEqual(r.calls, []);
@@ -72,7 +129,7 @@ test('only the exact GitHub marketplace registration is accepted, with HTTPS and
 test('missing, draft, duplicate, incomplete, oversized and checksumless release assets fail before saving', () => fixture(async f => {
   for (const modify of [r => {r.release.draft = true;}, r => {r.release.tag_name = 'wrong-version';}, r => {r.release.assets = [];},
     r => {r.release.assets.push({...r.release.assets[0]});}, r => {r.release.assets[0].state = 'starter';},
-    r => {r.release.assets[0].size = 3 * 1024 * 1024;}, r => {delete r.release.assets[0].digest;}, r => {r.repo.private = false;},
+    r => {r.release.assets[0].size = 3 * 1024 * 1024;}, r => {delete r.release.assets[0].digest;}, r => {delete r.repo.private;},
     r => {r.repo.full_name = 'invented-owner/other-release';}]) {
     const r = remote(f); modify(r);
     await assert.rejects(downloadMarketplaceSetup(r.options)); assert.equal(fs.existsSync(f.state), false);

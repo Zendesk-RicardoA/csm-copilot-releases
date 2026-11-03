@@ -12,6 +12,8 @@ export function startInventedRenewalHost(directory, { scenario = 'base', collect
   if (temp === plugin || temp.startsWith(plugin + path.sep) || fs.lstatSync(temp).isSymbolicLink()) throw new Error('Use an isolated invented directory.');
   const write = (name, value) => fs.writeFileSync(path.join(temp, name), JSON.stringify(value), { mode: 0o600 });
   const manifest = JSON.parse(fs.readFileSync(path.join(plugin, 'config/approved-version-manifest.json'), 'utf8'));
+  // A disposable invented-data fixture, not a renewal of any installed approval.
+  manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
   manifest.status = 'approved_for_limited_beta';
   manifest.constraints = { real_customer_data: true, external_reads: true, private_draft_writes: true, production_system_writes: false, generated_artifacts: true };
   write('invented-manifest.json', manifest);

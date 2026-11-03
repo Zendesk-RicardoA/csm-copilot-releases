@@ -11,8 +11,9 @@ person, verify a Slides builder or complete any customer workflow.
 ## Check before changing anything
 
 For a fresh install or upgrade, inspect the supported Codex marketplace listing
-and the installed package version first. The normal distribution is the private
-GitHub marketplace. Use the exact repository clone URL supplied by the owner or
+and the installed package version first. The normal distribution is the
+GitHub marketplace. Public repositories require no GitHub account, invitation,
+GitHub CLI or GitHub sign-in. Use the exact HTTPS repository clone URL supplied by the owner or
 verified from Git metadata; never invent it. If only a downloaded/local folder
 is registered, explain that Git upgrades will not follow that folder. With the
 existing installation authorization, replace only this plugin's marketplace
@@ -33,8 +34,9 @@ reuse it. Do not install a runtime to work around an invocation error.
 
 - If `configured`, continue the normal native setup wizard. Do not import again.
 - If `private_setup_required`, run the same bundled helper with `download`.
-  It discovers this plugin's registered private GitHub marketplace, reuses the
-  user's existing GitHub access, and downloads the exact installed version's
+  It discovers this plugin's registered GitHub marketplace and reads public
+  repositories anonymously. Only a private repository reuses the user's existing
+  GitHub access. It downloads the exact installed version's
   published setup asset. It checks GitHub's size and SHA-256 digest and the
   existing frozen release proof, complete plugin inventory and private controls.
   A valid owner-only local cache is reused when setup resumes. Do not ask the
@@ -42,9 +44,10 @@ reuse it. Do not install a runtime to work around an invocation error.
   a token. Do not create, edit or guess release controls.
 - For `downloaded` or `cached`, use only the returned verified `setup_file` path
   in the apply step below. For `configured`, continue the native setup wizard.
-- For a GitHub sign-in error, give the one returned GitHub sign-in step and
+- For a private-repository GitHub sign-in error, give the one returned GitHub sign-in step and
   resume after the user completes it. Access, SSO, unavailable-release and
   connectivity errors have different next actions; follow the returned code.
+  Public release availability and rate-limit errors do not need a GitHub account.
   Do not loop through reinstallations or repeated sign-in attempts. If the
   user explicitly chooses offline setup, the existing matching-file apply path
   remains available; it is not the normal installation route.

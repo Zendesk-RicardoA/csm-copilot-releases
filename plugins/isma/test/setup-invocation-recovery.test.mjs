@@ -48,6 +48,6 @@ test('a local-folder registration gives Git-source recovery without network, fal
   const name=JSON.parse(fs.readFileSync(path.join(f.plugin,'.codex-plugin/plugin.json'))).name;
   await assert.rejects(downloadMarketplaceSetup({...f.options,marketplaceListing:{marketplaces:[{name,root:f.plugin,marketplaceSource:{sourceType:'local',source:f.plugin}}]},
     client:{json:()=>{throw new Error('must not access network');}}}),error=>error.code==='MARKETPLACE_SETUP_SOURCE_REQUIRED'
-      &&/private settings/.test(error.message)&&/exact clone URL/.test(error.message)&&/Do not guess/.test(error.message));
+      &&/private settings/.test(error.message)&&/exact (?:HTTPS )?clone URL/.test(error.message)&&/Do not guess/.test(error.message));
   assert.equal(fs.existsSync(f.state),false);
 }));

@@ -1,12 +1,13 @@
-# ISMA release checks
+# Public download release checks
 
-Package: **0.3.3-isma.live.codex.20261031012538**.
+Package: **0.3.4-isma.live.codex.20261103113542**.
 
-- [x] Complete all twenty source/package technical stages and five invented workflow simulations.
-- [x] Verify cold automatic acquisition and strict existing setup import with invented data.
-- [x] Reject tampered, wrong-version, incomplete, public-repository and unsafe-cache inputs.
-- [x] Verify safe authentication fallback, redirects and recovery without repeated install jobs.
-- [x] Keep private setup, credentials, identities and customer state outside Git history.
-- [ ] Verify the exact uploaded setup asset through the real private download path before updating the installation branch.
-- [ ] Verify the local Git update, preserved settings and fresh native startup.
-- [ ] Complete independent colleague installation and fresh model/live/rendered acceptance before wider approved distribution.
+- [x] Complete every source/package technical stage and all five invented workflow simulations.
+- [x] Verify anonymous public setup acquisition, private authentication fallback and strict release/inventory checks with invented data.
+- [x] Independently verify all previous assertions in the approved fixture-only update are unchanged.
+- [x] Keep personal credentials, profiles, customer state and case approvals outside the release payload.
+- [ ] Audit the final working tree, complete release history and versioned setup assets before changing visibility.
+- [ ] Verify the uploaded exact-version setup before moving the installation branch.
+- [ ] Verify real anonymous repository access and setup download after publication.
+- [ ] Verify the local Git update, preserved private settings and fresh native startup.
+- [ ] Complete independent colleague installation and live/human output acceptance before claiming stable release acceptance.

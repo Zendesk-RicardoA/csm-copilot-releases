@@ -1,4 +1,4 @@
-// First-run release setup. Acquisition reads only the registered private GitHub release.
+// First-run release setup. Acquisition reads only the exact registered GitHub release.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -125,7 +125,7 @@ const outcome = (metadata, state, changed = false) => ({state, package_version: 
   restart_required: changed, next_action: state === 'configured'
     ? changed ? 'Restart the desktop app and run the setup wizard in a fresh chat. Then verify your own company sign-in; release setup is not connection readiness.'
       : 'Continue the setup wizard and verify your own company sign-in. This check does not establish source or workflow readiness.'
-    : 'Run the bundled setup download command to acquire the matching private GitHub release setup. Do not run customer workflows or edit approval files.'});
+    : 'Run the bundled setup download command to acquire the matching GitHub release setup. Public repositories need no GitHub sign-in. Do not run customer workflows or edit approval files.'});
 
 export async function downloadMarketplaceSetup(options = {}) {
   requireStandaloneRuntime();

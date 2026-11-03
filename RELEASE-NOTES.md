@@ -1,8 +1,10 @@
-# ISMA developer attribution
+# Public ISMA downloads
 
-Package: **0.3.3-isma.live.codex.20261031012538**.
-Frozen package SHA-256: 59c0cf04475e69c72302ea207e6ac9cb204ae25c79e78634d24d074ebe995bb3.
+Package: **0.3.4-isma.live.codex.20261103113542**.
+Frozen package SHA-256: 438a97c6725879e6da4190b950ff582187b809202fbef70c7e083838a1624edf.
 
-The owner explicitly requested their public credit in author.name and interface.developerName. The real-name exception is limited to these two attribution fields. No customer identities, email addresses or credentials are included.
+The existing GitHub release source now supports public downloads without a GitHub account or invitation. Setup tries anonymous access first and only consults existing credentials when a private repository requires them. Missing public releases and rate limits do not trigger a sign-in loop. Exact-version selection, complete inventory checks and SHA-256 verification remain enforced.
 
-All twenty technical stages passed: 1155 source tests, 719 packaged tests and all five invented workflows. Existing startup, renderer, source permissions and human draft protections remain unchanged. App Foundry is being explored separately; this update does not migrate or deploy it.
+The owner approved a fixture-only correction for expired simulated test approvals. Every previous assertion was independently verified unchanged. The bundled and installed access policies were not extended by that repair. All 20 technical stages passed, including 1158 source tests, 722 packaged tests and five invented workflow simulations.
+
+Each user still signs in to company tools with their own account. Existing private settings, source permissions, the no-expiry policy and private draft reviews are preserved. This update does not claim independent colleague, live customer or human rendered-output acceptance.

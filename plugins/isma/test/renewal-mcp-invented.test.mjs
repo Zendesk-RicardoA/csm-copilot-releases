@@ -17,6 +17,8 @@ function writeJson(file, value) { fs.writeFileSync(file, `${JSON.stringify(value
 
 function testRuntime(tempDir) {
   const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, "config", "approved-version-manifest.json"), "utf8"));
+  // Only this disposable invented-data fixture gets a fresh test lifetime.
+  manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
   // This simulated approval exists only inside this test's temporary folder.
   // The fake reader and impossible Python path prevent live source access.
   manifest.status = "approved_for_limited_beta";

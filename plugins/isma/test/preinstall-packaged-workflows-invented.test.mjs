@@ -16,6 +16,8 @@ function startInventedServer(t, { bookMode = "ready" } = {}) {
   const namespace = `csm-preinstall-${randomBytes(6).toString("hex")}`;
   const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, "config", "approved-version-manifest.json"), "utf8"));
   // This simulation never edits the candidate manifest and cannot reach a live source.
+  // Give only this disposable, synthetic fixture a one-minute test lifetime.
+  manifest.expires_at = new Date(Date.now() + 60_000).toISOString();
   manifest.status = "approved_for_limited_beta";
   manifest.constraints = {
     real_customer_data: true, external_reads: true, private_draft_writes: true,

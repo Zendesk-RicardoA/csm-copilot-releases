@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
 import test from 'node:test';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -106,6 +107,42 @@ test('GUI processes can discover the same installed Homebrew CLI without editing
   assert.equal(found, options.snow);
 });
 
+test('a shell launcher is not run as Python or mistaken for damaged configuration', async t => {
+  const {inspectSnowflakeSetup} = await setupModule(); const options = fixture(t);
+  fs.writeFileSync(options.snow, '#!/bin/bash\n', {mode: 0o700});
+  const result = inspectSnowflakeSetup({...options, runner() { assert.fail('A shell must never run the Python worker'); }});
+  assert.equal(result.state, 'runtime_unsupported');
+  assert.equal(result.failure_code, 'SNOWFLAKE_RUNTIME_UNSUPPORTED');
+  assert.equal(result.next_action.code, 'REPAIR_SNOWFLAKE_RUNTIME');
+  assert.equal(result.prerequisites.cli, 'available');
+  assert.equal(result.configuration_changed, false);
+});
+
+test('an explicit runtime override cannot select a shell', async t => {
+  const {resolveSnowflakePython} = await import('../mcp/snowflake-runtime.mjs'); const options = fixture(t);
+  assert.throws(() => resolveSnowflakePython({...options,
+    environment: {...options.environment, CSM_COPILOT_SNOWFLAKE_PYTHON: '/bin/bash'}}),
+  {code: 'SNOWFLAKE_RUNTIME_UNSUPPORTED'});
+});
+
+test('a Homebrew shell launcher uses only its own formula Python environment', async t => {
+  const {inspectSnowflakeSetup} = await setupModule(); const options = fixture(t);
+  const {resolveSnowflakePython} = await import('../mcp/snowflake-runtime.mjs');
+  const formula = path.join(options.home, 'homebrew', 'Cellar', 'snowflake-cli', '0.0.0-invented');
+  const formulaBin = path.join(formula, 'bin'); const formulaPython = path.join(formula, 'libexec', 'bin', 'python3');
+  fs.mkdirSync(formulaBin, {recursive: true}); fs.mkdirSync(path.dirname(formulaPython), {recursive: true});
+  fs.writeFileSync(path.join(formulaBin, 'snow'), '#!/bin/bash\n', {mode: 0o700});
+  fs.writeFileSync(formulaPython, '', {mode: 0o700});
+  fs.unlinkSync(options.snow); fs.symlinkSync(path.join(formulaBin, 'snow'), options.snow);
+  assert.equal(resolveSnowflakePython(options), fs.realpathSync(formulaPython));
+  const result = inspectSnowflakeSetup({...options, runner(command) {
+    assert.equal(command, fs.realpathSync(formulaPython));
+    return {status: 0, stdout: JSON.stringify({state: 'configuration_missing'})};
+  }});
+  assert.equal(result.next_action.code, 'CONFIGURE_SNOWFLAKE_ZDP');
+  assert.equal(result.prerequisites.cli, 'available');
+});
+
 test('existing system-specific macOS configuration is reused, not replaced by an empty profile', async t => {
   const {resolveSnowflakeConfigPath} = await import('../mcp/snowflake-runtime.mjs'); const options = fixture(t);
   const target = path.join(options.home, 'Library', 'Application Support', 'snowflake', 'config.toml');
@@ -120,6 +157,10 @@ test('native setup controls are registered and cannot authenticate or mutate in 
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'config/approved-version-manifest.json')));
   // Only the temporary, source-disabled invented fixture has this test lifetime.
   manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
+  for (const relative of ['mcp/snowflake-runtime.mjs', 'mcp/snowflake-onboarding.mjs', 'mcp/setup-dependencies.mjs',
+    'test/snowflake-onboarding-regressions.test.mjs', 'test/isma-dependency-installation.test.mjs']) {
+    manifest.integrity.files[relative] = createHash('sha256').update(fs.readFileSync(path.join(root, relative))).digest('hex');
+  }
   fs.writeFileSync(fixtureManifest, JSON.stringify(manifest), {mode: 0o600});
   const requests = [
     ['tools/list', {}],

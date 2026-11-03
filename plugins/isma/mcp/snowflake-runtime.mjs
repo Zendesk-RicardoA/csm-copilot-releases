@@ -21,7 +21,11 @@ export function resolveSnowflakeCommand(options = {}) {
 
 export function resolveSnowflakePython(options = {}) {
   const environment = options.environment || process.env;
-  if (environment.CSM_COPILOT_SNOWFLAKE_PYTHON) return environment.CSM_COPILOT_SNOWFLAKE_PYTHON;
+  const override = environment.CSM_COPILOT_SNOWFLAKE_PYTHON;
+  if (override) {
+    if (isPythonExecutable(override)) return override;
+    throw unsupportedRuntime();
+  }
   const executable = resolveSnowflakeCommand(options);
   if (!executable) throw new BetaError('SNOWFLAKE_CLI_NOT_INSTALLED', 'The local Snowflake software is missing. Ask permission to install it before company sign-in.', {failure_stage: 'cli_start'});
   // The managed serial reader uses the same Python environment as the CLI.
@@ -31,10 +35,34 @@ export function resolveSnowflakePython(options = {}) {
   try { const buffer = Buffer.alloc(1024); const size = fs.readSync(descriptor, buffer, 0, buffer.length, 0); firstLine = buffer.subarray(0, size).toString('utf8').split(/\r?\n/, 1)[0]; }
   finally { fs.closeSync(descriptor); }
   const match = /^#!([^\s]+)$/.exec(firstLine);
-  if (!match || !path.isAbsolute(match[1]) || !fs.existsSync(match[1])) {
-    throw new BetaError('SNOWFLAKE_RUNTIME_UNSUPPORTED', 'The installed Snowflake software does not expose the Python runtime required by this beta. Use the approved Python-based CLI installation; do not change source permissions.', {failure_stage: 'local_runtime'});
+  if (match && isPythonExecutable(match[1])) return match[1];
+  // Homebrew may expose a shell launcher while keeping the CLI's Python
+  // environment inside the same formula. Only that exact formula-owned
+  // environment is eligible; never run the worker with the shell launcher.
+  const formulaPython = homebrewFormulaPython(executable);
+  if (formulaPython) return formulaPython;
+  throw unsupportedRuntime();
+}
+
+function unsupportedRuntime() {
+  return new BetaError('SNOWFLAKE_RUNTIME_UNSUPPORTED', 'The installed Snowflake CLI does not expose a supported Python runtime. Keep the existing configuration and ask the beta owner to review this installation.', {failure_stage: 'local_runtime'});
+}
+
+function isPythonExecutable(executable) {
+  if (!path.isAbsolute(executable) || !/^python(?:3(?:\.\d+)?)?$/.test(path.basename(executable))) return false;
+  try { fs.accessSync(executable, fs.constants.X_OK); return fs.statSync(executable).isFile(); } catch { return false; }
+}
+
+function homebrewFormulaPython(executable) {
+  let real;
+  try { real = fs.realpathSync(executable); } catch { return null; }
+  const match = /^(.*\/Cellar\/snowflake-cli\/[^/]+)\/(?:bin|libexec\/bin)\/snow$/.exec(real);
+  if (!match) return null;
+  for (const name of ['python3', 'python']) {
+    const candidate = path.join(match[1], 'libexec', 'bin', name);
+    if (isPythonExecutable(candidate)) return candidate;
   }
-  return match[1];
+  return null;
 }
 
 export function resolveSnowflakeConfigPath({home = os.homedir(), environment = process.env, platform = process.platform} = {}) {

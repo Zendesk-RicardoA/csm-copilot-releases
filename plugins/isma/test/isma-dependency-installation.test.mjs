@@ -8,6 +8,8 @@ import { buildDependencyChecklist, SetupDependencyInstallations } from '../mcp/s
 
 const missing = { state: 'cli_missing', prerequisites: { cli: 'missing' } };
 const installed = { state: 'configuration_missing', prerequisites: { cli: 'available' }, next_action: { code: 'CONFIGURE_SNOWFLAKE_ZDP' } };
+const configurationBlocked = { state: 'blocked', prerequisites: { cli: 'available' }, next_action: { code: 'REVIEW_SNOWFLAKE_CONFIGURATION' } };
+const runtimeUnsupported = { state: 'runtime_unsupported', prerequisites: { cli: 'available' }, next_action: { code: 'REPAIR_SNOWFLAKE_RUNTIME' } };
 function fixture(t, options = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'isma-invented-setup-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -67,6 +69,43 @@ test('an existing supported installation needs neither approval nor another soft
   const result = f.jobs.start({ dependencyId: 'snowflake' });
   assert.equal(result.status, 'installed_verified'); assert.equal(result.installation_performed, false);
   assert.equal(f.calls.length, 0);
+});
+
+test('an installed CLI is not reinstalled when its separate configuration check is blocked', t => {
+  const f = fixture(t); f.setLocal(configurationBlocked);
+  const result = f.jobs.start({ dependencyId: 'snowflake' });
+  assert.equal(result.status, 'installed_verified');
+  assert.equal(result.next_action.code, 'REVIEW_SNOWFLAKE_CONFIGURATION');
+  assert.equal(result.installation_performed, false);
+  assert.equal(f.calls.length, 0);
+});
+
+test('a shell launcher without supported Python returns a runtime error without reinstalling', t => {
+  const f = fixture(t); f.setLocal(runtimeUnsupported);
+  const result = f.jobs.start({ dependencyId: 'snowflake' });
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.code, 'SNOWFLAKE_RUNTIME_UNSUPPORTED');
+  assert.equal(result.installation_performed, false);
+  assert.equal(f.calls.length, 0);
+});
+
+test('a completed CLI install is verified separately from a blocked configuration check', t => {
+  const f = fixture(t); const first = f.jobs.start({ dependencyId: 'snowflake', installationAuthorized: true });
+  f.setLocal(configurationBlocked); f.children[0].emit('close', 0);
+  const result = f.jobs.read(first.install_ref);
+  assert.equal(result.status, 'installed_verified');
+  assert.equal(result.next_action.code, 'REVIEW_SNOWFLAKE_CONFIGURATION');
+});
+
+test('a completed install reports an unsupported runtime without a reinstall loop', t => {
+  const f = fixture(t); const first = f.jobs.start({ dependencyId: 'snowflake', installationAuthorized: true });
+  f.setLocal(runtimeUnsupported); f.children[0].emit('close', 0);
+  const result = f.jobs.read(first.install_ref);
+  assert.equal(result.status, 'blocked');
+  assert.equal(result.code, 'SNOWFLAKE_RUNTIME_UNSUPPORTED');
+  assert.equal(result.next_action.code, 'REPAIR_SNOWFLAKE_RUNTIME');
+  assert.equal(f.jobs.start({ dependencyId: 'snowflake' }).installation_performed, false);
+  assert.equal(f.calls.length, 1);
 });
 
 test('a failed install reports its cause and an explicit retry reuses the original exact approval', t => {

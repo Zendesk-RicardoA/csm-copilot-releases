@@ -104,9 +104,10 @@ export class SetupDependencyInstallations {
     if (!['approved_homebrew', 'codex_marketplace'].includes(item.installation)) return { status: 'host_action_required', dependency_id: dependencyId,
       installation_performed: false, next_action: installationRequest(item) };
     const local = dependencyId === 'snowflake' ? this.inspect() : null;
-    if (local?.prerequisites?.cli === 'available' && !['runtime_unsupported', 'blocked'].includes(local.state)) return {
-      status: 'installed_verified', dependency_id: dependencyId, installation_performed: false,
-      source_access_verified: false, next_action: local.next_action };
+    if (local?.prerequisites?.cli === 'available') return {
+      status: local.state === 'runtime_unsupported' ? 'blocked' : 'installed_verified', dependency_id: dependencyId,
+      ...(local.state === 'runtime_unsupported' ? { code: 'SNOWFLAKE_RUNTIME_UNSUPPORTED' } : {}),
+      installation_performed: false, source_access_verified: false, next_action: local.next_action };
     const executable = item.installation === 'approved_homebrew'
       ? this.resolveExecutable('brew', ['/opt/homebrew/bin', '/usr/local/bin'])
       : this.resolveExecutable('codex', ['/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin', '/Applications/Codex.app/Contents/Resources']);
@@ -148,9 +149,11 @@ export class SetupDependencyInstallations {
     const finish = (exitCode, failed = false) => {
       if (finished) return; finished = true; clearTimeout(timeout);
       const verification = dependencyId === 'snowflake' ? this.inspect() : null;
-      const verified = dependencyId === 'snowflake' ? verification?.prerequisites?.cli === 'available' && !['runtime_unsupported', 'blocked'].includes(verification.state)
+      const verified = dependencyId === 'snowflake' ? verification?.prerequisites?.cli === 'available' && verification.state !== 'runtime_unsupported'
         : this.inspectPlugin(item.plugin_reference, executable);
-      job.state = !failed && exitCode === 0 && verified ? 'installed_verified' : 'failed';
+      job.state = !failed && exitCode === 0 && verified ? 'installed_verified'
+        : !failed && exitCode === 0 && verification?.state === 'runtime_unsupported' ? 'blocked' : 'failed';
+      if (job.state === 'blocked') job.code = 'SNOWFLAKE_RUNTIME_UNSUPPORTED';
       if (job.state === 'failed') job.code = job.timed_out ? 'INSTALLATION_TIMEOUT'
         : /permission denied|operation not permitted|EACCES/i.test(output) ? 'INSTALL_PERMISSION_DENIED'
         : /network|could not resolve|connection refused|failed to download/i.test(output) ? 'INSTALL_NETWORK_FAILED'

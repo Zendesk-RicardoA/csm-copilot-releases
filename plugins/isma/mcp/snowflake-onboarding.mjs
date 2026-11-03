@@ -14,7 +14,7 @@ function display(state, prerequisites, code = null, changed = false) {
   if (state === 'cli_missing') next = action('INSTALL_SNOWFLAKE_CLI', 'Install the local Snowflake software', 'Ask permission to install the official Python-based Snowflake CLI using the company-approved method. Do not install Homebrew, change security settings, or request credentials automatically.', {
     host_install_request: {formula: 'snowflake-cli', arguments: ['install', 'snowflake-cli'], authorization_required: true, executes_automatically: false},
   });
-  else if (state === 'runtime_unsupported') next = action('REPAIR_SNOWFLAKE_RUNTIME', 'Use the supported Snowflake runtime', 'The managed reader needs a Python-based Snowflake CLI with Python 3.11 or later. Ask permission before installing or replacing software. No source permissions need changing.');
+  else if (state === 'runtime_unsupported') next = action('REPAIR_SNOWFLAKE_RUNTIME', 'Use the supported Snowflake runtime', 'The installed Snowflake CLI does not expose a supported Python environment for this beta. Keep the existing configuration and ask the beta owner to review the installation. Do not reinstall software or change source permissions automatically.');
   else if (['configuration_missing', 'connection_missing'].includes(state)) next = action('CONFIGURE_SNOWFLAKE_ZDP', 'Set up your own Snowflake connection', 'Ask permission for the bounded local configuration step. It uses the owner-supplied connection template and the named handoff login hint, never shared credentials. It does not sign in or verify identity.');
   else if (state === 'configured') next = action('CONNECT_SNOWFLAKE_ZDP', 'Sign in to Snowflake with your company account', 'Run the native connection check and complete company browser sign-in. A local profile is not proof of identity, source access or an approved read-only role.');
   else next = action('REVIEW_SNOWFLAKE_CONFIGURATION', 'Review the local Snowflake setup', ['SETUP_TEMPLATE_MISSING', 'SETUP_TEMPLATE_INVALID', 'LOGIN_HINT_MISSING', 'PACKAGE_MISMATCH'].includes(code)
@@ -44,7 +44,7 @@ export function inspectSnowflakeSetup(options = {}) {
   if (prerequisites.cli === 'missing') return display('cli_missing', prerequisites);
   let result;
   try { result = runLocalWorker(options, false); }
-  catch (error) { return error.code === 'SNOWFLAKE_RUNTIME_UNSUPPORTED' ? display('runtime_unsupported', prerequisites) : display('blocked', prerequisites, 'LOCAL_SETUP_CHECK_FAILED'); }
+  catch (error) { return error.code === 'SNOWFLAKE_RUNTIME_UNSUPPORTED' ? display('runtime_unsupported', prerequisites, error.code) : display('blocked', prerequisites, 'LOCAL_SETUP_CHECK_FAILED'); }
   prerequisites.connection = result.state === 'configured' ? 'present' : result.state === 'connection_missing' ? 'missing' : 'not_checked';
   return display(result.state, prerequisites, result.code);
 }
@@ -56,7 +56,7 @@ export function configureSnowflakeSetup(options = {}) {
   if (![options.templatePath, options.descriptorPath, options.packageVersion].every(value => typeof value === 'string' && value)) return display('blocked', prerequisites, 'SETUP_TEMPLATE_MISSING');
   let result;
   try { result = runLocalWorker(options, true); }
-  catch (error) { return error.code === 'SNOWFLAKE_RUNTIME_UNSUPPORTED' ? display('runtime_unsupported', prerequisites) : display('blocked', prerequisites, 'LOCAL_SETUP_CHECK_FAILED'); }
+  catch (error) { return error.code === 'SNOWFLAKE_RUNTIME_UNSUPPORTED' ? display('runtime_unsupported', prerequisites, error.code) : display('blocked', prerequisites, 'LOCAL_SETUP_CHECK_FAILED'); }
   return display(result.state, {...prerequisites, configuration: result.state === 'configured' ? 'present' : 'not_checked', connection: result.state === 'configured' ? 'present' : 'not_checked'}, result.code, result.changed === true);
 }
 

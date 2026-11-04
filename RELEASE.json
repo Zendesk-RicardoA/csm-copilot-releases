@@ -2,8 +2,8 @@
   "schema_version": "1.0",
   "channel": "candidate",
   "package_name": "isma",
-  "package_version": "0.3.6-isma.live.codex.20261104002908",
-  "package_sha256": "7b8c11c42a7f746b6bda035303b4694bff33f306a10f0004fd39a329abb3ff8e",
+  "package_version": "0.3.7-isma.live.codex.20261104161057",
+  "package_sha256": "84716a8e481ec776e0c99df021e7bb0b97dece33fce0fbebd79ef6f4ee03420f",
   "components": {
     "schema_version": "1.0",
     "renderer_baseline": "recovery-v3",
@@ -39,7 +39,7 @@
   "approval_status": "authorized_live_acceptance",
   "private_setup_in_git": false,
   "plugin_rebuilt": false,
-  "setup_release_tag": "isma-setup-v0.3.6-isma.live.codex.20261104002908",
+  "setup_release_tag": "isma-setup-v0.3.7-isma.live.codex.20261104161057",
   "setup_release_asset": "private-setup.json",
   "repository_visibility": "public",
   "github_account_required": false

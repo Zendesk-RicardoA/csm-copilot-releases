@@ -1,11 +1,9 @@
-# ISMA 0.3.6 — managed Snowflake installation
+ISMA 0.3.7 fixes unnecessary refusals for factual data analysis.
 
-ISMA 0.3.6 improves first-time Snowflake installation.
+When a built-in report cannot express a question, ISMA can run a bounded read-only query through the same verified Snowflake connection. The analysis request authorizes that read within its stated scope; it does not need a case, a selected CTA or another read-approval prompt.
 
-After the user approves Python and Snowflake CLI installation, ISMA can download its own tested private runtime. Homebrew and a preinstalled Python are no longer prerequisites on supported Macs.
+The bundled source guide includes the current-book/CTA-owner comparison and preserves open, closed and unknown statuses. The route also supports other factual analysis rather than requiring a new built-in report for every question.
 
-The installer checks disk space and folder access, verifies the Python archive and every Snowflake package hash, reports progress, resumes verified partial downloads, and activates only after local checks pass. Existing profiles and working software are preserved. Broken software can receive a separate private environment.
+Existing identity, source permissions, current-book and bounded manager scopes, visible result limits, transient data handling and customer-draft reviews remain in place. The Snowflake installer, presentation renderers, saved settings and no-expiry policy are unchanged.
 
-Technical verification includes the complete source and packaged workflow checks and actual fresh installation tests for Apple Silicon and Intel. Apple Silicon ran natively; Intel ran through existing Rosetta support. Physical Intel and independent colleague installation remain separate acceptance checks.
-
-This preserves the existing public candidate channel, company authentication, account permissions, no-expiry policy, private draft approvals and Gmail signature handling. No customer data was read and no presentation renderer was changed.
+This update uses the existing public ISMA candidate channel.

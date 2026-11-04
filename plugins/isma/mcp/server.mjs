@@ -1377,7 +1377,7 @@ const tools = [
   },
   {
     name: "beta_get_book_of_business_analysis_capabilities",
-    description: "Describe the read-only aggregate measures and dimensions available for Book of Business Analysis. It makes no customer-data read and clearly identifies dimensions whose authoritative source field is not yet mapped.",
+    description: "Describe the built-in book reports without reading customer data. This catalog is not exhaustive: for a factual analysis it cannot express, follow the bundled read-only analysis guide using the same verified Snowflake connection.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {

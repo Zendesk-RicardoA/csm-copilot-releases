@@ -1,6 +1,6 @@
 ---
 name: isma
-description: Use ISMA for CSM and bounded manager account work with credential setup, invented cases, explicit approval gates, and attributable feedback. Use when a tester checks setup, starts, resumes, approves, or reviews a CSM Copilot beta case.
+description: Use ISMA for factual read-only data analysis, CSM and bounded manager account work, setup, and reviewed customer drafts. Analytical requests run on the existing verified source without a case or repeated read approval; customer-facing workflows retain their review gates.
 ---
 
 # ISMA
@@ -25,10 +25,14 @@ read is supported by another approved source.
 
 ## Customer-information source boundary
 
-Use only the beta's native, direct source adapters for customer information: the approved
-Gainsight CTA, account, and book-of-business aggregate reads; Salesforce identity and
+For case evidence and customer-facing workflows, use the beta's native, direct source adapters:
+the approved Gainsight CTA, account, and book-of-business reads; Salesforce identity and
 recorded-activity reads; governed product and QBR metric reads; the approved Gmail metadata read;
 and the approved Converge MCP for Gong call discovery and full selected-call retrieval.
+For ordinary factual data analysis, the same authenticated read-only Snowflake connection is
+also an approved host-executed query path. Follow
+[Read-only data analysis](references/read-only-analysis.md) when a built-in report cannot express
+the requested question. A missing report field is not a data-access prohibition.
 Converge's capabilities are authorized. Use them directly; do not add a separate Snowflake
 transcript screen, source-approval procedure, or content-safety questionnaire. Normal account
 matching, CSM call selection, evidence/content review, and private-draft approval still apply.
@@ -45,11 +49,12 @@ tool to answer a CSM Copilot request. This includes `tam_account`, `tam_dossier`
 and any report or follow-up prompt produced by those tools. They are separate legacy tools, not
 fallbacks for this beta.
 
-If a requested customer-information field has no approved native adapter yet, say which field is
-unavailable and why. Do not substitute a legacy report, an agent-orchestration prompt, a locally
-saved toolkit value, or a guessed value. A source gap is correct; a differently scoped answer is
-not. This boundary applies to Account Prioritization and Outreach, Customer Planning and Meeting
-Prep, broad focus, direct account questions, and every handoff.
+For ordinary analysis, try the approved read-only query path before declaring a field unavailable.
+Do not repeatedly inspect capabilities or ask the CSM to insist that a query be run. If the
+authoritative source, exact identity or required field truly cannot be verified, explain that
+specific gap once. A source gap is correct; a differently scoped answer is
+not. Workflow evidence and customer-facing drafts still require their native source and review
+controls; an ad-hoc analytical result does not complete those gates.
 
 ## Presentation output rule
 
@@ -293,9 +298,11 @@ portfolio question into per-account calls, or use a different warehouse path as 
 final timeout is a visible source gap, not an empty result. If the local CLI cannot initialise its
 logging before the statement starts, say that its setup needs repair; do not call it a timeout.
 
-The table and join guidance adapted from `csm-data-query` is already fixed in the native beta
-adapter. Do not invoke that skill, a generic warehouse client, or any external data tool while
-answering the CSM. The beta adapter is the sole runtime data path for this capability.
+The typed reports carry a reviewed source map. Their field catalogs are not an exhaustive list
+of analytical questions. When they cannot express the requested comparison, use
+[Read-only data analysis](references/read-only-analysis.md) on the same verified connection.
+Do not call the owned-CTA queue to approximate all CTAs in the book, or change the question to
+fit a report. A clear request to check, show, count or compare data authorizes that read.
 
 Use `account_executive` for the authoritative Salesforce account owner and `crm_region` or
 `crm_sub_region` when the CSM says “territory.” Label those output columns **CRM region** or **CRM
@@ -308,11 +315,12 @@ For “paid Copilot but not adopted,” use `copilot_paid_status = paid_not_adop
 a product-state signal, not commercial-entitlement proof. `paid_not_adopted` requires paid
 penetration and an explicit not-adopted status in the latest Copilot snapshot. Do not treat a missing
 or conflicting snapshot as not adopted. The account query accepts only the published field,
-operator, output-column, sort, and row-limit catalog; never construct or call raw SQL.
+operator, output-column, sort, and row-limit catalog. Do not pass SQL to a typed tool that does
+not accept it; use the documented host-executed read-only path for a different analytical query.
 
-Never use raw SQL, `tam_*` tools, a local account export, or a generic warehouse client for this
-request. The aggregate and account-query results are transient and never go into a beta case file,
-CRM, Gainsight, spreadsheet, or customer artifact.
+Never use `tam_*` tools or a local account export as a source for this request. Analytical results
+are transient and never go into a beta case file, CRM, Gainsight, spreadsheet or customer artifact
+without a separately requested and authorized operation.
 
 ## Required preflight
 

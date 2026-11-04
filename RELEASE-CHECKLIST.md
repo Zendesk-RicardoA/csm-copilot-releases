@@ -1,12 +1,12 @@
-# ISMA managed Snowflake installer checks
+# ISMA analysis-routing checks
 
-Package: **0.3.6-isma.live.codex.20261104002908**.
+Package: **0.3.7-isma.live.codex.20261104161057**.
 
-- [x] Freeze and verify all 20 source and packaged technical stages, including 751 packaged tests.
-- [x] Test actual complete installations without usable preinstalled Python or Homebrew.
-- [x] Verify Apple Silicon natively and Intel through existing Rosetta support.
-- [x] Preserve existing connection profiles, private settings and working software.
-- [x] Bind the exact frozen plugin inventory and matching setup asset.
-- [x] Publish and verify the exact setup asset before updating the installation branch.
-- [x] Verify anonymous clone/download and the same-source local update.
-- [ ] Complete independent colleague installation, physical Intel and stable customer-output acceptance.
+- [x] Reproduce and fix missing-report routing with invented data.
+- [x] Verify current-book CTA ownership, open/closed/unknown status, archived rows and ambiguous identity.
+- [x] Pass the source and invented-package technical verification.
+- [x] Freeze and verify the exact release with the existing non-credential controls.
+- [x] Verify the exact public plugin and matching setup inventory.
+- [ ] Publish and anonymously verify setup before updating the installation branch.
+- [ ] Verify the same-source local update, startup and preservation of private settings.
+- [ ] Complete independent colleague and fresh-model/live customer-output acceptance.

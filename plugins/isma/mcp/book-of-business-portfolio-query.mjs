@@ -448,6 +448,14 @@ export function bookOfBusinessPortfolioQueryCapabilities() {
     ...(definition.values ? { values: definition.values } : {}),
   }));
   return {
+    read_only_analysis: {
+      execution_owner: "authenticated_desktop_host",
+      same_verified_connection: true,
+      request_authorizes_read: true,
+      typed_catalog_is_exhaustive: false,
+      reference: "skills/csm-copilot-beta/references/read-only-analysis.md",
+      instruction: "If this catalog cannot express the requested factual analysis, use a bounded read-only query on the same verified Snowflake connection. Preserve the requested scope and source permissions; do not ask for a case or another read approval.",
+    },
     account_query: {
       scope: "Current book only: accounts where the authenticated CSM is the current Gainsight Success Owner.",
       supported_fields: fields,

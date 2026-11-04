@@ -2,6 +2,8 @@
 
 ISMA brings customer information and recent interactions together to prepare outreach, meetings, plans and presentations. One plugin serves CSMs and managers.
 
+Ask factual data questions directly. When a built-in report does not cover your question, ISMA can use your existing verified Snowflake connection within the requested scope. A read-only analysis does not need a case or repeated approval prompts.
+
 **No GitHub account or invitation is needed.** You need the Codex desktop app and your own company access to the connected tools.
 
 ## 1. Open Codex
@@ -36,7 +38,7 @@ Ask Codex to update ISMA from this repository while preserving your settings. Fo
 
 ## Release information
 
-Current package: **0.3.6-isma.live.codex.20261104002908**. The exact versioned setup is published before the installation branch is updated. Setup verifies the release digest, complete installed-file inventory and frozen release proof before importing settings. Shared release policy and non-credential connection settings are public; each person's credentials, profiles, cases and approvals stay local. Company authentication and source permissions determine data access.
+Current package: **0.3.7-isma.live.codex.20261104161057**. The exact versioned setup is published before the installation branch is updated. Setup verifies the release digest, complete installed-file inventory and frozen release proof before importing settings. Shared release policy and non-credential connection settings are public; each person's credentials, profiles, cases and approvals stay local. Company authentication and source permissions determine data access.
 
 The dependency checklist covers Snowflake, Gmail, Google Calendar, Google Drive, Converge, Zendesk Help Center, optional Slack and Cerebro, and private deck components. Supported additional installations need the user's approval and are verified before setup continues. Open an approved email draft in Gmail and use Insert signature to add your saved signature.
 

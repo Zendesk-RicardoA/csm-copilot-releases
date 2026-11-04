@@ -7,6 +7,6 @@ Package: **0.3.6-isma.live.codex.20261104002908**.
 - [x] Verify Apple Silicon natively and Intel through existing Rosetta support.
 - [x] Preserve existing connection profiles, private settings and working software.
 - [x] Bind the exact frozen plugin inventory and matching setup asset.
-- [ ] Publish and verify the exact setup asset before updating the installation branch.
-- [ ] Verify anonymous clone/download and the same-source local update.
+- [x] Publish and verify the exact setup asset before updating the installation branch.
+- [x] Verify anonymous clone/download and the same-source local update.
 - [ ] Complete independent colleague installation, physical Intel and stable customer-output acceptance.

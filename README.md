@@ -16,6 +16,8 @@ Install ISMA from https://github.com/Zendesk-RicardoA/csm-copilot-releases.git. 
 
 Codex downloads the plugin and its matching setup automatically. Follow the permission prompts it shows. You do not need to download or attach a setup file yourself.
 
+If Snowflake software is missing or incompatible, approve the Python and Snowflake CLI installation when asked. ISMA downloads and checks its own software in a dedicated folder. You do not need Homebrew, a preinstalled Python, or terminal commands.
+
 ## 3. Finish setup
 
 When asked, quit and reopen the desktop app. Start a new chat and send:
@@ -34,7 +36,7 @@ Ask Codex to update ISMA from this repository while preserving your settings. Fo
 
 ## Release information
 
-Current package: **0.3.5-isma.live.codex.20261103174914**. The exact versioned setup is published before the installation branch is updated. Setup verifies the release digest, complete installed-file inventory and frozen release proof before importing settings. Shared release policy and non-credential connection settings are public; each person's credentials, profiles, cases and approvals stay local. Company authentication and source permissions determine data access.
+Current package: **0.3.6-isma.live.codex.20261104002908**. The exact versioned setup is published before the installation branch is updated. Setup verifies the release digest, complete installed-file inventory and frozen release proof before importing settings. Shared release policy and non-credential connection settings are public; each person's credentials, profiles, cases and approvals stay local. Company authentication and source permissions determine data access.
 
 The dependency checklist covers Snowflake, Gmail, Google Calendar, Google Drive, Converge, Zendesk Help Center, optional Slack and Cerebro, and private deck components. Supported additional installations need the user's approval and are verified before setup continues. Open an approved email draft in Gmail and use Insert signature to add your saved signature.
 

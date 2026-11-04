@@ -11,10 +11,10 @@ const action = (code, title, instruction, extra = {}) => ({code, title, instruct
 
 function display(state, prerequisites, code = null, changed = false) {
   let next;
-  if (state === 'cli_missing') next = action('INSTALL_SNOWFLAKE_CLI', 'Install the local Snowflake software', 'Ask permission to install the official Python-based Snowflake CLI using the company-approved method. Do not install Homebrew, change security settings, or request credentials automatically.', {
-    host_install_request: {formula: 'snowflake-cli', arguments: ['install', 'snowflake-cli'], authorization_required: true, executes_automatically: false},
+  if (state === 'cli_missing') next = action('INSTALL_SNOWFLAKE_CLI', 'Install the local Snowflake software', "Ask permission to install ISMA's private Python and Snowflake CLI components. The fixed installer downloads checksum-pinned packages for this Mac, verifies them, and preserves existing connection settings. No Homebrew or preinstalled Python is required.", {
+    host_install_request: {tool: 'beta_install_setup_dependency', dependency_id: 'snowflake', components: ['ISMA Python runtime', 'Snowflake CLI'], authorization_required: true, executes_automatically: false},
   });
-  else if (state === 'runtime_unsupported') next = action('REPAIR_SNOWFLAKE_RUNTIME', 'Use the supported Snowflake runtime', 'The installed Snowflake CLI does not expose a supported Python environment for this beta. Keep the existing configuration and ask the beta owner to review the installation. Do not reinstall software or change source permissions automatically.');
+  else if (state === 'runtime_unsupported') next = action('REPAIR_SNOWFLAKE_RUNTIME', 'Use the supported Snowflake runtime', "The installed Snowflake software does not expose the required Python environment. With approval, install a separate verified ISMA runtime. Preserve existing software and connection settings; no source permissions need changing.", {host_install_request: {tool: 'beta_install_setup_dependency', dependency_id: 'snowflake', components: ['ISMA Python runtime', 'Snowflake CLI'], authorization_required: true, executes_automatically: false}});
   else if (['configuration_missing', 'connection_missing'].includes(state)) next = action('CONFIGURE_SNOWFLAKE_ZDP', 'Set up your own Snowflake connection', 'Ask permission for the bounded local configuration step. It uses the owner-supplied connection template and the named handoff login hint, never shared credentials. It does not sign in or verify identity.');
   else if (state === 'configured') next = action('CONNECT_SNOWFLAKE_ZDP', 'Sign in to Snowflake with your company account', 'Run the native connection check and complete company browser sign-in. A local profile is not proof of identity, source access or an approved read-only role.');
   else next = action('REVIEW_SNOWFLAKE_CONFIGURATION', 'Review the local Snowflake setup', ['SETUP_TEMPLATE_MISSING', 'SETUP_TEMPLATE_INVALID', 'LOGIN_HINT_MISSING', 'PACKAGE_MISMATCH'].includes(code)
@@ -26,7 +26,7 @@ function display(state, prerequisites, code = null, changed = false) {
 
 function runLocalWorker(options, configure) {
   const python = resolveSnowflakePython(options);
-  const args = [WORKER, '--config-path', resolveSnowflakeConfigPath(options), '--connection-name', options.connectionName || 'zdp-global'];
+  const args = ['-B', WORKER, '--check-runtime', '--config-path', resolveSnowflakeConfigPath(options), '--connection-name', options.connectionName || 'zdp-global'];
   if (configure) args.push('--configure', '--template-path', options.templatePath, '--descriptor-path', options.descriptorPath,
     '--package-version', options.packageVersion, '--approved-roles', JSON.stringify(options.approvedReadOnlyRoles || []));
   const result = (options.runner || spawnSync)(python, args, {encoding: 'utf8', timeout: 10000, maxBuffer: 65536, shell: false,

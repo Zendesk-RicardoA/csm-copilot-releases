@@ -19,7 +19,7 @@ function fixture(t, options = {}) {
     const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter(); child.kill = () => {};
     calls.push({ command, args, settings }); children.push(child); return child;
   };
-  const args = { directory, packageVersion: '0.0.0-invented', inspect: () => local,
+  const args = { directory, packageVersion: '0.0.0-invented', platform: 'darwin', arch: 'arm64', inspect: () => local,
     spawnProcess, resolveExecutable: name => '/invented/bin/' + name, ...options };
   return { jobs: new SetupDependencyInstallations(args), args, calls, children, directory, setLocal: value => { local = value; } };
 }
@@ -55,7 +55,8 @@ test('missing software executes only the fixed approved recipe and reuses the ru
   const first = f.jobs.start({ dependencyId: 'snowflake', installationAuthorized: true });
   const repeated = f.jobs.start({ dependencyId: 'snowflake' });
   assert.equal(repeated.install_ref, first.install_ref); assert.equal(f.calls.length, 1);
-  assert.deepEqual(f.calls[0].args, ['install', 'snowflake-cli']);
+  assert.match(f.calls[0].args[0], /snowflake-runtime-bootstrap\.mjs$/);
+  assert.equal(f.calls[0].command, process.execPath);
   assert.equal(f.calls[0].settings.shell, false);
   f.setLocal(installed); f.children[0].emit('close', 0);
   const completed = f.jobs.read(first.install_ref);
@@ -80,13 +81,13 @@ test('an installed CLI is not reinstalled when its separate configuration check 
   assert.equal(f.calls.length, 0);
 });
 
-test('a shell launcher without supported Python returns a runtime error without reinstalling', t => {
+test('a shell launcher without supported Python needs approval for a separate repair', t => {
   const f = fixture(t); f.setLocal(runtimeUnsupported);
-  const result = f.jobs.start({ dependencyId: 'snowflake' });
-  assert.equal(result.status, 'blocked');
-  assert.equal(result.code, 'SNOWFLAKE_RUNTIME_UNSUPPORTED');
-  assert.equal(result.installation_performed, false);
+  assert.throws(() => f.jobs.start({dependencyId: 'snowflake'}), {code: 'SOFTWARE_INSTALLATION_APPROVAL_REQUIRED'});
   assert.equal(f.calls.length, 0);
+  const result = f.jobs.start({dependencyId: 'snowflake', installationAuthorized: true});
+  assert.equal(result.status, 'running'); assert.equal(result.recipe, 'managed_python');
+  f.setLocal(installed); f.children[0].emit('close', 0);
 });
 
 test('a completed CLI install is verified separately from a blocked configuration check', t => {
@@ -132,8 +133,8 @@ test('restart or a changed installation recipe cannot silently relaunch a pendin
 });
 
 test('missing approved installer or a host connection never triggers a package-manager or arbitrary-command installation', t => {
-  const f = fixture(t, { resolveExecutable: () => null });
-  assert.equal(f.jobs.start({ dependencyId: 'snowflake', installationAuthorized: true }).code, 'APPROVED_INSTALLER_MISSING');
+  const f = fixture(t, { resolveExecutable: () => null, platform: 'unsupported' });
+  assert.equal(f.jobs.start({ dependencyId: 'snowflake', installationAuthorized: true }).code, 'INSTALL_UNSUPPORTED_PLATFORM');
   assert.equal(f.jobs.start({ dependencyId: 'gmail', installationAuthorized: true }).status, 'host_action_required');
   assert.equal(f.jobs.start({ dependencyId: 'converge', installationAuthorized: true }).status, 'host_action_required');
   assert.throws(() => f.jobs.start({ dependencyId: 'arbitrary' }), { code: 'UNKNOWN_SETUP_DEPENDENCY' });

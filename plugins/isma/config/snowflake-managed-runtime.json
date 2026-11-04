@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "provider": "astral-python-build-standalone",
+  "python_version": "3.12.16",
+  "snowflake_version": "3.24.1",
+  "minimum_free_bytes": 1073741824,
+  "targets": {
+    "darwin-arm64": {
+      "archive": "cpython-3.12.16+20261026-aarch64-apple-darwin-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.12.16%2B20261026-aarch64-apple-darwin-install_only_stripped.tar.gz",
+      "sha256": "353d5f1b4fd2715e7053f12f068435d5bbad16b91e057006b5d01e0925709a7e",
+      "size": 25035343,
+      "requirements": "snowflake-runtime-lock-darwin-arm64.txt",
+      "requirements_sha256": "aebaf141c2d2a8dd8985eba81d826342c4d36dd2e3f1ebf2759719973a992ce8"
+    },
+    "darwin-x64": {
+      "archive": "cpython-3.12.16+20261026-x86_64-apple-darwin-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.12.16%2B20261026-x86_64-apple-darwin-install_only_stripped.tar.gz",
+      "sha256": "37c38fda76fec1fbf310adcbafb7f0d96af13b5511bf8ea954c3aa8eec185734",
+      "size": 24757272,
+      "requirements": "snowflake-runtime-lock-darwin-x64.txt",
+      "requirements_sha256": "db64a91477c03f82d7040f300c5a060529458e4dff8c32723482618f6c2a8d39"
+    }
+  }
+}

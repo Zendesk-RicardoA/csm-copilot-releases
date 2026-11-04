@@ -4,6 +4,8 @@ import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { BetaError } from './core.mjs';
 import { inspectSnowflakeSetup } from './snowflake-onboarding.mjs';
+import { snowflakeInstallationRecipe, installationFailureCode } from './snowflake-installation.mjs';
+import os from 'node:os';
 
 export const DEPENDENCIES = Object.freeze(JSON.parse(fs.readFileSync(new URL('../config/setup-dependencies.json', import.meta.url), 'utf8')).dependencies);
 const WORKFLOWS = new Set(['all', ...DEPENDENCIES.flatMap(item => item.workflows)]);
@@ -26,7 +28,7 @@ function observationsById(observations) {
 }
 
 function installationRequest(item) {
-  if (item.installation === 'approved_homebrew') return { kind: 'native_installation', tool: 'beta_install_setup_dependency', dependency_id: item.id, authorization_required: true };
+  if (item.installation === 'approved_snowflake') return { kind: 'native_installation', tool: 'beta_install_setup_dependency', dependency_id: item.id, authorization_required: true, components: ['ISMA Python runtime', 'Snowflake CLI'], scope: 'Private ISMA software installation; company sign-in remains separate' };
   if (item.installation === 'codex_marketplace') return { kind: 'native_installation', tool: 'beta_install_setup_dependency', dependency_id: item.id, authorization_required: true };
   if (item.installation === 'host_plugin') return { kind: 'host_plugin', plugin_query: item.plugin_query,
     instruction: 'Resolve this exact provider in Plugin Management, use its supported install/connect action, then refresh this same checklist. Preserve the existing approval; do not claim installation before the host confirms it.' };
@@ -88,10 +90,21 @@ function findExecutable(name, extra = []) {
 
 // Only fixed installation recipes execute. Caller-provided commands, URLs,
 // arguments, credentials and permission changes never enter this boundary.
+function installationRecovery(code) {
+  if (code === 'INSTALL_NETWORK_FAILED') return 'The software download failed. Check your internet connection, then explicitly retry this same installation. Its approval is retained; do not restart setup.';
+  if (code === 'INSTALL_PERMISSION_DENIED' || code === 'INSTALL_POLICY_BLOCKED') return 'The installation was stopped by local permissions or company policy. Ask IT to resolve the reported restriction, then retry this same installation. Do not use sudo or change security settings.';
+  if (code === 'INSTALL_DISK_SPACE_LOW') return 'Free space on this Mac, then retry this same installation. The existing approval is retained.';
+  if (code === 'INSTALL_DOWNLOAD_INTEGRITY_FAILED') return 'The runtime download did not match the pinned release. It was not used. Retry the same download once; report this code to the release owner if it repeats.';
+  if (code === 'INSTALL_ALREADY_RUNNING') return 'An ISMA runtime installation is already running. Continue that installation instead of starting another.';
+  if (code === 'INSTALL_RUNTIME_UNSAFE') return 'The ISMA installation directory could not be safely reused. Existing files were preserved. Ask the release owner to review it before retrying; do not delete or overwrite it automatically.';
+  return 'The installation did not pass local verification. Preserve the result and report this code to the release owner. Retry the same installation only when requested; do not repeat sign-in or approval.';
+}
+
 export class SetupDependencyInstallations {
-  constructor({ directory, packageVersion, inspect = inspectSnowflakeSetup, inspectPlugin = null, spawnProcess = spawn, resolveExecutable = findExecutable, clock = Date.now } = {}) {
+  constructor({ directory, packageVersion, inspect = inspectSnowflakeSetup, inspectPlugin = null, spawnProcess = spawn, resolveExecutable = findExecutable, installationRunner = spawnSync, home = os.homedir(), platform = process.platform, arch = process.arch, isProcessRunning = pid => {try {process.kill(pid, 0); return true;} catch (error) {return error.code === 'EPERM';}}, clock = Date.now } = {}) {
     this.directory = directory; this.packageVersion = packageVersion; this.inspect = inspect;
     this.spawnProcess = spawnProcess; this.resolveExecutable = resolveExecutable; this.clock = clock; this.jobs = new Map();
+    this.installationRunner = installationRunner; this.home = home; this.platform = platform; this.arch = arch; this.isProcessRunning = isProcessRunning;
     this.inspectPlugin = inspectPlugin || ((reference, executable) => {
       try { const result = spawnSync(executable, ['plugin', 'list', '--json'], { encoding: 'utf8', timeout: 10000, maxBuffer: 2 * 1024 * 1024 });
         return result.status === 0 && JSON.parse(result.stdout).installed?.some(item => item.pluginId === reference && item.installed === true && item.enabled === true) === true; } catch { return false; }
@@ -101,50 +114,77 @@ export class SetupDependencyInstallations {
     if (typeof installationAuthorized !== 'boolean' || typeof retryFailed !== 'boolean') throw new BetaError('INVALID_INPUT', 'Installation approval and retry must be explicit boolean decisions.');
     const item = DEPENDENCIES.find(value => value.id === dependencyId);
     if (!item) throw new BetaError('UNKNOWN_SETUP_DEPENDENCY', 'Choose a dependency from the current checklist.');
-    if (!['approved_homebrew', 'codex_marketplace'].includes(item.installation)) return { status: 'host_action_required', dependency_id: dependencyId,
+    if (!['approved_snowflake', 'codex_marketplace'].includes(item.installation)) return { status: 'host_action_required', dependency_id: dependencyId,
       installation_performed: false, next_action: installationRequest(item) };
     const local = dependencyId === 'snowflake' ? this.inspect() : null;
-    if (local?.prerequisites?.cli === 'available') return {
-      status: local.state === 'runtime_unsupported' ? 'blocked' : 'installed_verified', dependency_id: dependencyId,
-      ...(local.state === 'runtime_unsupported' ? { code: 'SNOWFLAKE_RUNTIME_UNSUPPORTED' } : {}),
+    if (local?.prerequisites?.cli === 'available' && local.state !== 'runtime_unsupported') return {
+      status: 'installed_verified', dependency_id: dependencyId,
       installation_performed: false, source_access_verified: false, next_action: local.next_action };
-    const executable = item.installation === 'approved_homebrew'
-      ? this.resolveExecutable('brew', ['/opt/homebrew/bin', '/usr/local/bin'])
-      : this.resolveExecutable('codex', ['/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin', '/Applications/Codex.app/Contents/Resources']);
-    if (!executable) return { status: 'blocked', dependency_id: dependencyId, code: 'APPROVED_INSTALLER_MISSING',
-      next_action: 'The approved installer is missing. Use the company software portal or ask IT for this dependency; no package manager or security setting was changed.' };
+    const recipe = item.installation === 'approved_snowflake'
+      ? snowflakeInstallationRecipe({home: this.home, platform: this.platform, arch: this.arch})
+      : {kind: 'codex_marketplace', executable: this.resolveExecutable('codex',
+          ['/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin', '/Applications/Codex.app/Contents/Resources']),
+        args: ['plugin', 'add', item.plugin_reference]};
+    if (!recipe?.executable) return { status: 'blocked', dependency_id: dependencyId,
+      code: dependencyId === 'snowflake' ? 'INSTALL_UNSUPPORTED_PLATFORM' : 'APPROVED_INSTALLER_MISSING',
+      installation_performed: false,
+      next_action: dependencyId === 'snowflake'
+        ? 'The automatic ISMA runtime installer supports Apple Silicon and Intel Macs. This platform needs a separately supported Snowflake installation. No software was changed.'
+        : 'The approved installer is missing. Use the company software portal or ask IT for this dependency; no package manager or security setting was changed.' };
+    const {executable, args} = recipe;
     if (item.installation === 'codex_marketplace' && this.inspectPlugin(item.plugin_reference, executable)) return {
       status: 'installed_verified', dependency_id: dependencyId, installation_performed: false, source_access_verified: false,
       next_action: 'The plugin is installed and enabled. Check its own connection before claiming source access.' };
-    const args = item.installation === 'approved_homebrew' ? ['install', 'snowflake-cli'] : ['plugin', 'add', item.plugin_reference];
-    const scope = crypto.createHash('sha256').update(JSON.stringify({ packageVersion: this.packageVersion, dependencyId, executable, args })).digest('hex');
+    const scope = crypto.createHash('sha256').update(JSON.stringify({ packageVersion: this.packageVersion, dependencyId, executable, args, package: recipe.package || null, recipe_digest: recipe.recipe_digest || null })).digest('hex');
     const file = path.join(this.directory, `${dependencyId}.json`);
     let previous = null;
     if (fs.existsSync(file)) {
       if (fs.lstatSync(file).isSymbolicLink()) throw new BetaError('UNSAFE_SETUP_STATE', 'The installation receipt must be a private regular file.');
       previous = JSON.parse(fs.readFileSync(file, 'utf8'));
     }
+    if (previous?.state === 'running' && Number.isSafeInteger(previous.worker_pid) && previous.worker_pid > 0
+      && !this.isProcessRunning(previous.worker_pid)) {
+      previous.state = 'failed'; previous.code = 'INSTALLATION_INTERRUPTED'; previous.phase = 'finished';
+      previous.next_action = 'The previous installer stopped. Explicitly retry this same installation to resume its verified downloads; its approval is retained.';
+      this.save(file, previous);
+    }
     if (previous?.scope_digest === scope) {
       if (this.jobs.get(previous.install_ref)?.state === 'running') return this.read(previous.install_ref);
       if (previous.state === 'running') return { status: 'needs_reconciliation', dependency_id: dependencyId,
         next_action: 'An earlier installation may still be running. Check its result before another installation; do not repeat the approval or launch a duplicate.' };
-      if (!retryFailed && !installationAuthorized) return { ...previous, status: previous.state === 'installed_verified' ? 'verification_required' : previous.state, installation_performed: false,
-        next_action: 'The previous installation finished with this result. Verify the dependency or explicitly retry this same failed installation; do not restart setup or repeat its permission request.' };
+      if (!retryFailed) return { ...previous, status: previous.state === 'installed_verified' ? 'verification_required' : previous.state, installation_performed: false,
+        next_action: previous.next_action || 'The previous installation finished with this result. Verify the dependency or explicitly retry this same failed installation; do not restart setup or repeat its permission request.' };
     }
     const approvalReused = previous?.scope_digest === scope && previous.installation_authorized === true;
     if (!installationAuthorized && !approvalReused) throw new BetaError('SOFTWARE_INSTALLATION_APPROVAL_REQUIRED', 'Approve installation of this named component before software changes.');
+    if (previous?.state === 'running') return {status: 'needs_reconciliation', dependency_id: dependencyId,
+      installation_performed: false, next_action: 'An earlier installation is still running or its result is uncertain. Continue or reconcile that job before another installation.'};
     const job = { install_ref: crypto.randomUUID(), dependency_id: dependencyId, state: 'running', scope_digest: scope,
-      installation_authorized: true, approval_reused: approvalReused, started_at: new Date(this.clock()).toISOString(),
+      installation_authorized: true, approval_reused: approvalReused, recipe: recipe.kind, started_at: new Date(this.clock()).toISOString(),
       phase: 'installing', attempts: approvalReused ? (previous.attempts || 1) + 1 : 1 };
     this.jobs.set(job.install_ref, job); this.save(file, job);
     let process;
     try { process = this.spawnProcess(executable, args, { stdio: ['ignore', 'pipe', 'pipe'], shell: false,
-      env: { ...globalThis.process.env, HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_ENV_HINTS: '1', NONINTERACTIVE: '1' } }); }
+      env: { ...globalThis.process.env, HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_ENV_HINTS: '1', NONINTERACTIVE: '1' } });
+      if (Number.isSafeInteger(process.pid) && process.pid > 0) {job.worker_pid = process.pid; this.save(file, job);} }
     catch { job.state = 'failed'; job.code = 'INSTALL_START_FAILED'; this.save(file, job); return this.read(job.install_ref); }
     let output = '';
     const collect = data => { output = (output + String(data)).slice(-16000); };
-    process.stdout?.on('data', collect); process.stderr?.on('data', collect);
-    const timeout = setTimeout(() => { job.timed_out = true; process.kill('SIGTERM'); }, 300000); timeout.unref?.();
+    let progressBuffer = '';
+    process.stdout?.on('data', data => {
+      collect(data); progressBuffer = (progressBuffer + String(data)).slice(-16384);
+      const lines = progressBuffer.split(/\r?\n/); progressBuffer = lines.pop();
+      for (const line of lines) {
+        try {
+          const value = JSON.parse(line);
+          if (['checking_prerequisites', 'downloading_python', 'verifying_python', 'installing_snowflake', 'verifying_snowflake', 'activating_runtime'].includes(value.phase)) {
+            job.phase = value.phase; this.save(file, job);
+          }
+        } catch {}
+      }
+    });
+    process.stderr?.on('data', collect);
+    const timeout = setTimeout(() => { job.timed_out = true; process.kill('SIGTERM'); }, dependencyId === 'snowflake' ? 600000 : 300000); timeout.unref?.();
     let finished = false;
     const finish = (exitCode, failed = false) => {
       if (finished) return; finished = true; clearTimeout(timeout);
@@ -159,8 +199,10 @@ export class SetupDependencyInstallations {
         : /network|could not resolve|connection refused|failed to download/i.test(output) ? 'INSTALL_NETWORK_FAILED'
         : /not allowed|blocked|policy|administrator/i.test(output) ? 'INSTALL_POLICY_BLOCKED'
         : 'INSTALL_VERIFICATION_FAILED';
+      if (job.state === 'failed' && !job.timed_out && recipe.kind === 'managed_python') job.code = installationFailureCode(output, job.code);
       job.phase = 'finished'; job.finished_at = new Date(this.clock()).toISOString();
-      job.source_access_verified = false; job.next_action = verification?.next_action || null;
+      job.source_access_verified = false;
+      job.next_action = job.state === 'failed' ? installationRecovery(job.code) : verification?.next_action || null;
       output = ''; this.save(file, job);
     };
     process.on('error', () => finish(null, true)); process.on('close', code => finish(code));

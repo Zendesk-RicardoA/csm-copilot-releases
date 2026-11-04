@@ -2,16 +2,20 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {BetaError} from './core.mjs';
+import {readManagedRuntime} from './snowflake-managed-runtime.mjs';
 
 function searchDirectories({home = os.homedir(), environment = process.env, platform = process.platform, extraSearchDirectories} = {}) {
   return [...new Set([
     ...(environment.PATH || '').split(path.delimiter).filter(value => path.isAbsolute(value)),
     ...(extraSearchDirectories || (platform === 'darwin' ? ['/opt/homebrew/bin', '/usr/local/bin'] : [])),
     path.join(home, '.local', 'bin'),
+    path.join(home, '.local', 'share', 'isma', 'snowflake-runtime', platform === 'win32' ? 'Scripts' : 'bin'),
   ])];
 }
 
 export function resolveSnowflakeCommand(options = {}) {
+  const managed = readManagedRuntime(options);
+  if (managed) return managed.command;
   for (const directory of searchDirectories(options)) {
     const executable = path.join(directory, 'snow');
     try { if (fs.statSync(executable).isFile()) { fs.accessSync(executable, fs.constants.X_OK); return executable; } } catch {}
@@ -26,6 +30,8 @@ export function resolveSnowflakePython(options = {}) {
     if (isPythonExecutable(override)) return override;
     throw unsupportedRuntime();
   }
+  const managedRuntime = readManagedRuntime(options);
+  if (managedRuntime) return path.join(managedRuntime.directory, 'cli', 'bin', 'python3');
   const executable = resolveSnowflakeCommand(options);
   if (!executable) throw new BetaError('SNOWFLAKE_CLI_NOT_INSTALLED', 'The local Snowflake software is missing. Ask permission to install it before company sign-in.', {failure_stage: 'cli_start'});
   // The managed serial reader uses the same Python environment as the CLI.
@@ -41,6 +47,11 @@ export function resolveSnowflakePython(options = {}) {
   // environment is eligible; never run the worker with the shell launcher.
   const formulaPython = homebrewFormulaPython(executable);
   if (formulaPython) return formulaPython;
+  const managed = path.join(options.home || os.homedir(), '.local', 'share', 'isma', 'snowflake-runtime');
+  if (path.resolve(executable) === path.join(managed, 'bin', 'snow') && !fs.lstatSync(managed).isSymbolicLink()) {
+    const python = path.join(managed, 'bin', 'python3');
+    if (isPythonExecutable(python)) return python;
+  }
   throw unsupportedRuntime();
 }
 

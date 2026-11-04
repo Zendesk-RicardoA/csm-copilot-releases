@@ -25,12 +25,12 @@ chosen. A newer version's setup file must never be applied to an older plugin.
 
 Resolve the plugin root from this installed skill's directory (`../..`). Use the
 desktop's existing Node runtime to run the packaged helper
-`mcp/marketplace-setup.mjs inspect`. Do not fetch or install another runtime.
+`mcp/marketplace-setup.mjs inspect`. Do not fetch or install another Node runtime.
 The helper returns only setup status; never print the private files.
 Prefer a standalone child process for all helper commands. The host JavaScript
 REPL can orchestrate that process; do not import and execute the helper in the
 REPL's module context. Resolve the existing desktop Node executable once and
-reuse it. Do not install a runtime to work around an invocation error.
+reuse it. Do not install another Node runtime to work around an invocation error.
 
 - If `configured`, continue the normal native setup wizard. Do not import again.
 - If `private_setup_required`, run the same bundled helper with `download`.
@@ -124,9 +124,20 @@ After explicit authorization to install a named missing component, execute the
 returned `beta_install_setup_dependency` request with
 `installation_authorized:true`. Use `beta_continue_setup_installation` while
 the same job runs; never launch a duplicate or ask for the same approval again.
-The fixed supported recipes install Snowflake CLI through an existing Homebrew
-core formula or Cerebro through its existing company marketplace. Do not
-install Homebrew, use sudo, fetch a shell script or bypass company security.
+The fixed Snowflake recipe installs a private, versioned Python and Snowflake
+CLI environment for Apple Silicon or Intel Macs. It downloads only the pinned
+runtime archive, verifies its size and SHA-256, and installs the hash-locked
+binary packages. Homebrew and a preinstalled Python are not prerequisites.
+The approval must name both Python and Snowflake CLI. Use the native installer;
+do not improvise a download, shell script or package-manager installation.
+It checks free space and folder access, preserves existing files, reports
+progress, resumes verified downloads and activates the new environment only
+after its local checks pass. Existing working software is reused. A broken
+installation can be repaired through a separate private environment after
+approval; existing connection profiles remain intact.
+A known interrupted worker is reconciled before an explicit same-scope retry.
+An uncertain or still-running worker must not be duplicated. Cerebro uses its
+existing company marketplace. Do not use sudo or change security settings.
 If an approved recipe fails, show its specific safe failure and remedial step.
 Retry that same recipe only when requested, with `retry_failed:true`; the
 control reuses the prior same-scope approval. A restart with uncertain progress

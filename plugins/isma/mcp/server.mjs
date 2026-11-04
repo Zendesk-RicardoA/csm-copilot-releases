@@ -851,7 +851,7 @@ const tools = [
   },
   {
     name: 'beta_install_setup_dependency',
-    description: 'After explicit approval, execute the fixed approved installation recipe for missing Snowflake software or the Cerebro plugin. Reuse the same running job and approval across setup resumes. It never installs a package manager, uses sudo, changes security policy or source permissions. Other providers use their native host install/connect flow and return an honest handoff. Continue the returned installation rather than repeating approval or starting another job.',
+    description: "After explicit approval naming Python and Snowflake CLI, install ISMA's checksum-pinned private runtime on supported Apple Silicon or Intel Macs, verify its hash-locked packages, and resume setup. No Homebrew or preinstalled Python is required. Reuse the same running job and approval, reconcile interrupted workers, and preserve existing profiles and software. Cerebro uses its fixed marketplace recipe. It never installs a package manager, uses sudo, changes security policy or source permissions. Other providers use their native host install/connect flow.",
     inputSchema: { type: 'object', properties: { dependency_id: { type: 'string', enum: DEPENDENCIES.map(item => item.id) },
       installation_authorized: { type: 'boolean' }, retry_failed: { type: 'boolean' } }, required: ['dependency_id', 'installation_authorized'], additionalProperties: false },
   },

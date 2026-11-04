@@ -158,7 +158,9 @@ test('native setup controls are registered and cannot authenticate or mutate in 
   // Only the temporary, source-disabled invented fixture has this test lifetime.
   manifest.expires_at = new Date(Date.now() + 3_600_000).toISOString();
   for (const relative of ['mcp/snowflake-runtime.mjs', 'mcp/snowflake-onboarding.mjs', 'mcp/setup-dependencies.mjs',
-    'test/snowflake-onboarding-regressions.test.mjs', 'test/isma-dependency-installation.test.mjs']) {
+    'test/snowflake-onboarding-regressions.test.mjs', 'test/isma-dependency-installation.test.mjs',
+    'mcp/snowflake-installation.mjs', 'mcp/snowflake-install-worker.py', 'config/setup-dependencies.json',
+    'skills/setup/SKILL.md', 'skills/csm-copilot-beta/references/snowflake-first-run.md']) {
     manifest.integrity.files[relative] = createHash('sha256').update(fs.readFileSync(path.join(root, relative))).digest('hex');
   }
   fs.writeFileSync(fixtureManifest, JSON.stringify(manifest), {mode: 0o600});

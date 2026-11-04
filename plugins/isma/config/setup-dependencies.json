@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "product_name": "ISMA",
   "dependencies": [
-    {"id":"snowflake","title":"Snowflake software and connection","kind":"local_software","workflows":["daily_focus","portfolio_analytics","outreach","meeting_prep","renewal_conversation_brief"],"required":true,"installation":"approved_homebrew"},
+    {"id":"snowflake","title":"Snowflake software and connection","kind":"local_software","workflows":["daily_focus","portfolio_analytics","outreach","meeting_prep","renewal_conversation_brief"],"required":true,"installation":"approved_snowflake"},
     {"id":"gmail","title":"Gmail","kind":"host_plugin","workflows":["daily_focus","outreach"],"required":true,"installation":"host_plugin","plugin_query":"Gmail"},
     {"id":"calendar","title":"Google Calendar","kind":"host_plugin","workflows":["daily_focus"],"required":true,"installation":"host_plugin","plugin_query":"Google Calendar"},
     {"id":"drive","title":"Google Drive, Docs and Slides","kind":"host_plugin","workflows":["outreach","renewal_conversation_brief","selected_call_deck"],"required":true,"installation":"host_plugin","plugin_query":"Google Drive"},

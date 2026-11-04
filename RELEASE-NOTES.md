@@ -1,8 +1,11 @@
-# ISMA Snowflake setup repair
+# ISMA 0.3.6 — managed Snowflake installation
 
-Package: **0.3.5-isma.live.codex.20261103174914**.
-Frozen package SHA-256: 52b0ffe790c2e69130db5f25010714e86b5ed912f0bb87f40d0cf4f84489ff29.
+ISMA 0.3.6 improves first-time Snowflake installation.
 
-This candidate update repairs Snowflake setup when Homebrew installs Snowflake CLI through a Bash launcher. ISMA now resolves the formula's Python runtime, rejects a shell launcher as a Python interpreter, and reports an explicit unsupported-runtime error when it cannot find a valid runtime. If the CLI is installed but local configuration fails, setup reports the configuration block and preserves existing settings instead of attempting another CLI install.
+After the user approves Python and Snowflake CLI installation, ISMA can download its own tested private runtime. Homebrew and a preinstalled Python are no longer prerequisites on supported Macs.
 
-Homebrew detection and installation guidance is deferred to a later update. Existing company sign-in, source permissions and private draft reviews remain in force. The frozen candidate passed all technical gates and invented workflow simulations. Independent colleague installation, live customer workflows and human rendered-output acceptance have not been completed for this version.
+The installer checks disk space and folder access, verifies the Python archive and every Snowflake package hash, reports progress, resumes verified partial downloads, and activates only after local checks pass. Existing profiles and working software are preserved. Broken software can receive a separate private environment.
+
+Technical verification includes the complete source and packaged workflow checks and actual fresh installation tests for Apple Silicon and Intel. Apple Silicon ran natively; Intel ran through existing Rosetta support. Physical Intel and independent colleague installation remain separate acceptance checks.
+
+This preserves the existing public candidate channel, company authentication, account permissions, no-expiry policy, private draft approvals and Gmail signature handling. No customer data was read and no presentation renderer was changed.

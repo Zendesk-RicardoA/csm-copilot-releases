@@ -1,4 +1,4 @@
-"""Offline local setup only. Never imports the Snowflake SDK or opens a network connection."""
+"""Offline local setup and optional runtime import checks. Never opens a connection."""
 from __future__ import annotations
 import argparse
 import json
@@ -89,10 +89,18 @@ def configure(config, connection_name, template_path, descriptor_path, package_v
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config-path', required=True); parser.add_argument('--connection-name', required=True)
+    parser.add_argument('--check-runtime', action='store_true')
     parser.add_argument('--configure', action='store_true'); parser.add_argument('--template-path'); parser.add_argument('--descriptor-path')
     parser.add_argument('--package-version'); parser.add_argument('--approved-roles', default='[]')
     args = parser.parse_args()
     try:
+        if args.check_runtime:
+            try:
+                import snowflake.cli
+                import snowflake.connector
+            except Exception:
+                print(json.dumps({'state': 'runtime_unsupported', 'code': 'SNOWFLAKE_RUNTIME_INCOMPLETE'}))
+                return 1
         config = Path(args.config_path)
         result = configure(config, args.connection_name, Path(args.template_path), Path(args.descriptor_path), args.package_version, json.loads(args.approved_roles)) if args.configure else inspect(config, args.connection_name)
         print(json.dumps(result)); return 0
